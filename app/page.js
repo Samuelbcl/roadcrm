@@ -58,9 +58,19 @@ export default function Home() {
   const [rTxt, setRTxt] = useState("");
   const [rDel, setRDel] = useState(null);
 
-  // Load local meta (notes, done states)
+  // Load local meta (notes, done states) and manual appointments
   useEffect(() => {
-    setLocalMeta(getLocalData());
+    const local = getLocalData();
+    setLocalMeta(local);
+    // Load manual appointments immediately
+    const manualAppts = Object.entries(local)
+      .filter(([_, v]) => v && v.manual)
+      .map(([_, v]) => v);
+    if (manualAppts.length > 0) {
+      setAppointments(manualAppts.sort((a, b) =>
+        `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`)
+      ));
+    }
   }, []);
 
   // Fetch calendar events
@@ -80,9 +90,12 @@ export default function Home() {
         }));
         // Also include manually added appointments
         const manualAppts = Object.entries(local)
-          .filter(([_, v]) => v.manual)
+          .filter(([_, v]) => v && v.manual)
           .map(([_, v]) => v);
-        setAppointments([...merged, ...manualAppts].sort((a, b) =>
+        // Deduplicate by id
+        const allIds = new Set(merged.map((a) => a.id));
+        const uniqueManual = manualAppts.filter((a) => !allIds.has(a.id));
+        setAppointments([...merged, ...uniqueManual].sort((a, b) =>
           `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`)
         ));
       }
@@ -368,40 +381,39 @@ export default function Home() {
 
   // ─── Add form ────────────────────────────────────────────────────
   if (view === "form") return (
-    <div className="min-h-screen bg-stone-100">
-      <div className="fixed inset-0 bg-black/25 backdrop-blur-sm z-50 flex items-end">
-        <div className="w-full bg-white rounded-t-2xl px-4 pt-4 pb-6 animate-slide-up safe-bottom"
-          onClick={(e) => e.stopPropagation()}>
-          <div className="w-9 h-1 bg-stone-200 rounded-full mx-auto mb-3" />
-          <h2 className="text-base font-bold mb-3">Nouveau rendez-vous</h2>
-          <label className="block text-[11px] font-semibold text-stone-500 mb-1">Client</label>
-          <input className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition mb-2.5"
-            placeholder="Nom du client ou entreprise" value={fN} onChange={(e) => setFN(e.target.value)} autoFocus />
-          <label className="block text-[11px] font-semibold text-stone-500 mb-1">Adresse</label>
-          <input className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition mb-2.5"
-            placeholder="Adresse complète" value={fA} onChange={(e) => setFA(e.target.value)} />
-          <div className="flex gap-2 mb-3">
-            <div className="flex-1">
-              <label className="block text-[11px] font-semibold text-stone-500 mb-1">Date</label>
-              <input type="date" className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition"
-                value={fD} onChange={(e) => setFD(e.target.value)} />
-            </div>
-            <div className="flex-1">
-              <label className="block text-[11px] font-semibold text-stone-500 mb-1">Heure</label>
-              <input type="time" className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition"
-                value={fT} onChange={(e) => setFT(e.target.value)} />
-            </div>
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/25" onClick={() => setView("list")} />
+      <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl px-4 pt-4 animate-slide-up safe-bottom"
+        style={{ maxHeight: "85vh", overflowY: "auto" }}>
+        <div className="w-9 h-1 bg-stone-200 rounded-full mx-auto mb-3" />
+        <h2 className="text-base font-bold mb-3">Nouveau rendez-vous</h2>
+        <label className="block text-[11px] font-semibold text-stone-500 mb-1">Client</label>
+        <input className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition mb-2.5"
+          placeholder="Nom du client ou entreprise" value={fN} onChange={(e) => setFN(e.target.value)} />
+        <label className="block text-[11px] font-semibold text-stone-500 mb-1">Adresse</label>
+        <input className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition mb-2.5"
+          placeholder="Adresse complète" value={fA} onChange={(e) => setFA(e.target.value)} />
+        <div className="flex gap-2 mb-3">
+          <div className="flex-1">
+            <label className="block text-[11px] font-semibold text-stone-500 mb-1">Date</label>
+            <input type="date" className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition"
+              value={fD} onChange={(e) => setFD(e.target.value)} />
           </div>
-          <button onClick={addAppt}
-            className="w-full py-2.5 bg-stone-900 text-white rounded-lg text-[14px] font-semibold transition-opacity"
-            style={{ opacity: fN.trim() ? 1 : 0.35 }}>
-            Ajouter
-          </button>
-          <button onClick={() => setView("list")}
-            className="w-full py-2 text-[13px] text-stone-500 font-medium mt-1.5">
-            Annuler
-          </button>
+          <div className="flex-1">
+            <label className="block text-[11px] font-semibold text-stone-500 mb-1">Heure</label>
+            <input type="time" className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition"
+              value={fT} onChange={(e) => setFT(e.target.value)} />
+          </div>
         </div>
+        <button onClick={addAppt}
+          className="w-full py-2.5 bg-stone-900 text-white rounded-lg text-[14px] font-semibold transition-opacity"
+          style={{ opacity: fN.trim() ? 1 : 0.35 }}>
+          Ajouter
+        </button>
+        <button onClick={() => setView("list")}
+          className="w-full py-2 text-[13px] text-stone-500 font-medium mt-1.5 mb-4">
+          Annuler
+        </button>
       </div>
     </div>
   );
