@@ -337,26 +337,26 @@ export default function Home() {
 
       {/* Reminder sheet */}
       {showReminder && (
-        <div className="fixed inset-0 bg-black/25 backdrop-blur-sm z-50 flex items-end justify-center"
+        <div className="fixed inset-0 bg-black/25 backdrop-blur-sm z-50 flex items-end"
           onClick={() => setShowReminder(false)}>
-          <div className="w-full max-w-[440px] bg-white rounded-t-2xl p-5 pb-8 animate-slide-up"
+          <div className="w-full bg-white rounded-t-2xl px-4 pt-4 pb-6 animate-slide-up safe-bottom"
             onClick={(e) => e.stopPropagation()}>
-            <div className="w-9 h-1 bg-stone-200 rounded-full mx-auto mb-4" />
-            <h2 className="text-lg font-bold mb-4">Nouveau rappel</h2>
-            <label className="block text-xs font-semibold text-stone-500 mb-1.5">Message</label>
-            <input className="w-full px-3.5 py-2.5 bg-stone-100 rounded-xl text-sm outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition mb-4"
+            <div className="w-9 h-1 bg-stone-200 rounded-full mx-auto mb-3" />
+            <h2 className="text-base font-bold mb-3">Nouveau rappel</h2>
+            <label className="block text-[11px] font-semibold text-stone-500 mb-1">Message</label>
+            <input className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition mb-3"
               placeholder="Ex: Envoyer le devis..." value={rTxt} onChange={(e) => setRTxt(e.target.value)} />
-            <label className="block text-xs font-semibold text-stone-500 mb-2">Délai</label>
-            <div className="flex flex-wrap gap-2 mb-5">
+            <label className="block text-[11px] font-semibold text-stone-500 mb-1.5">Délai</label>
+            <div className="flex flex-wrap gap-1.5 mb-4">
               {[{ l: "5 min", v: 5 }, { l: "15 min", v: 15 }, { l: "30 min", v: 30 }, { l: "1h", v: 60 }, { l: "2h", v: 120 }, { l: "Demain", v: 1440 }].map((o) => (
                 <button key={o.v} onClick={() => setRDel(o.v)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${rDel === o.v ? "bg-blue-50 text-blue-600 border-2 border-blue-300 font-semibold" : "bg-stone-100 text-stone-500 border-2 border-transparent"}`}>
+                  className={`px-3 py-1.5 rounded-full text-[13px] font-medium transition-all ${rDel === o.v ? "bg-blue-50 text-blue-600 border-2 border-blue-300 font-semibold" : "bg-stone-100 text-stone-500 border-2 border-transparent"}`}>
                   {o.l}
                 </button>
               ))}
             </div>
             <button onClick={saveRem}
-              className="w-full py-3 bg-stone-900 text-white rounded-xl text-sm font-semibold transition-opacity"
+              className="w-full py-2.5 bg-stone-900 text-white rounded-lg text-[14px] font-semibold transition-opacity"
               style={{ opacity: rTxt && rDel ? 1 : 0.35 }}>
               Programmer
             </button>
@@ -368,37 +368,37 @@ export default function Home() {
 
   // ─── Add form ────────────────────────────────────────────────────
   if (view === "form") return (
-    <div className="max-w-[440px] mx-auto min-h-screen bg-stone-100">
-      <div className="fixed inset-0 bg-black/25 backdrop-blur-sm z-50 flex items-end justify-center">
-        <div className="w-full max-w-[440px] bg-white rounded-t-2xl p-5 pb-8 animate-slide-up"
+    <div className="min-h-screen bg-stone-100">
+      <div className="fixed inset-0 bg-black/25 backdrop-blur-sm z-50 flex items-end">
+        <div className="w-full bg-white rounded-t-2xl px-4 pt-4 pb-6 animate-slide-up safe-bottom"
           onClick={(e) => e.stopPropagation()}>
-          <div className="w-9 h-1 bg-stone-200 rounded-full mx-auto mb-4" />
-          <h2 className="text-lg font-bold mb-4">Nouveau rendez-vous</h2>
-          <label className="block text-xs font-semibold text-stone-500 mb-1.5">Client</label>
-          <input className="w-full px-3.5 py-2.5 bg-stone-100 rounded-xl text-sm outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition mb-3"
+          <div className="w-9 h-1 bg-stone-200 rounded-full mx-auto mb-3" />
+          <h2 className="text-base font-bold mb-3">Nouveau rendez-vous</h2>
+          <label className="block text-[11px] font-semibold text-stone-500 mb-1">Client</label>
+          <input className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition mb-2.5"
             placeholder="Nom du client ou entreprise" value={fN} onChange={(e) => setFN(e.target.value)} autoFocus />
-          <label className="block text-xs font-semibold text-stone-500 mb-1.5">Adresse</label>
-          <input className="w-full px-3.5 py-2.5 bg-stone-100 rounded-xl text-sm outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition mb-3"
+          <label className="block text-[11px] font-semibold text-stone-500 mb-1">Adresse</label>
+          <input className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition mb-2.5"
             placeholder="Adresse complète" value={fA} onChange={(e) => setFA(e.target.value)} />
-          <div className="flex gap-2 mb-4">
+          <div className="flex gap-2 mb-3">
             <div className="flex-1">
-              <label className="block text-xs font-semibold text-stone-500 mb-1.5">Date</label>
-              <input type="date" className="w-full px-3.5 py-2.5 bg-stone-100 rounded-xl text-sm outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition"
+              <label className="block text-[11px] font-semibold text-stone-500 mb-1">Date</label>
+              <input type="date" className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition"
                 value={fD} onChange={(e) => setFD(e.target.value)} />
             </div>
             <div className="flex-1">
-              <label className="block text-xs font-semibold text-stone-500 mb-1.5">Heure</label>
-              <input type="time" className="w-full px-3.5 py-2.5 bg-stone-100 rounded-xl text-sm outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition"
+              <label className="block text-[11px] font-semibold text-stone-500 mb-1">Heure</label>
+              <input type="time" className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition"
                 value={fT} onChange={(e) => setFT(e.target.value)} />
             </div>
           </div>
           <button onClick={addAppt}
-            className="w-full py-3 bg-stone-900 text-white rounded-xl text-sm font-semibold transition-opacity"
+            className="w-full py-2.5 bg-stone-900 text-white rounded-lg text-[14px] font-semibold transition-opacity"
             style={{ opacity: fN.trim() ? 1 : 0.35 }}>
             Ajouter
           </button>
           <button onClick={() => setView("list")}
-            className="w-full py-2.5 text-sm text-stone-500 font-medium mt-2">
+            className="w-full py-2 text-[13px] text-stone-500 font-medium mt-1.5">
             Annuler
           </button>
         </div>

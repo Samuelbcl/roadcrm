@@ -6,8 +6,18 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-body {
+html, body {
   font-family: "Figtree", system-ui, sans-serif;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+input, button, textarea {
+  font-size: 16px !important;
+}
+
+.safe-bottom {
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
 }
 
 @keyframes slideUp {

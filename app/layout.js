@@ -1,6 +1,13 @@
 import "./globals.css";
 import Providers from "@/components/Providers";
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export const metadata = {
   title: "RoadCRM",
   description: "Mini CRM de terrain pour commerciaux",
@@ -11,7 +18,6 @@ export const metadata = {
     statusBarStyle: "default",
     title: "RoadCRM",
   },
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
 };
 
 export default function RootLayout({ children }) {
