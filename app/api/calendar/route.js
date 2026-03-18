@@ -10,13 +10,13 @@ export async function GET(request) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
-  // Get today's date range
+  // Get date range - default to 3 months from now
   const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endRange = new Date(now.getFullYear(), now.getMonth() + 3, 0);
 
-  const timeMin = startOfDay.toISOString();
-  const timeMax = endOfDay.toISOString();
+  const timeMin = startOfMonth.toISOString();
+  const timeMax = endRange.toISOString();
 
   try {
     const res = await fetch(
@@ -26,7 +26,7 @@ export async function GET(request) {
           timeMax,
           singleEvents: "true",
           orderBy: "startTime",
-          maxResults: "20",
+          maxResults: "100",
         }),
       {
         headers: {
