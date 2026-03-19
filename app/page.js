@@ -457,7 +457,7 @@ export default function Home() {
             {notes.length > 0 && <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-blue-600" />}
           </button>
           <button onClick={fetchAll} className={`p-2 rounded-lg active:bg-stone-200 ${loading ? "animate-spin" : ""}`}><IRefresh size={16} color="#9CA3AF" /></button>
-          <button onClick={() => signOut()} className="p-2 rounded-lg active:bg-stone-200"><ILogout size={16} color="#9CA3AF" /></button>
+          <button onClick={() => { if (window.confirm("Se déconnecter ?")) signOut(); }} className="p-2 rounded-lg active:bg-stone-200"><ILogout size={16} color="#9CA3AF" /></button>
         </div>
       </div>
 
