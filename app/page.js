@@ -432,30 +432,28 @@ export default function Home() {
         <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden mb-5 shadow-sm">
           {[
             { id: "waze", name: "Waze", desc: "Navigation communautaire", logo: (
-              <svg width="22" height="22" viewBox="0 0 48 48">
-                <path d="M24 4C12.95 4 4 12.95 4 24c0 6.08 2.72 11.54 7 15.2V44l5.6-3.2C19.4 41.6 21.6 42 24 42c11.05 0 20-8.95 20-20S35.05 4 24 4z" fill="#33CCFF"/>
-                <ellipse cx="18" cy="22" rx="3" ry="3.5" fill="#fff"/>
-                <ellipse cx="30" cy="22" rx="3" ry="3.5" fill="#fff"/>
-                <circle cx="18" cy="22.5" r="1.5" fill="#222"/>
-                <circle cx="30" cy="22.5" r="1.5" fill="#222"/>
-                <path d="M18 31c2 2.5 4.5 3.5 6 3.5s4-1 6-3.5" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round"/>
+              <svg width="22" height="22" viewBox="0 0 200 200">
+                <path d="M100 10C50.3 10 10 50.3 10 100c0 22.1 8 42.3 21.2 58 3.5 4.1 8 7.5 8 12.8 0 5.5-3.5 10.2-3.5 16.2 0 2 1.5 3 3.2 3 4.8 0 14-8.5 21.8-13.2 5.5-3.3 8.5-2.8 14-2.8h1.3c4.3.7 17 3 25 3 49.7 0 90-40.3 90-90S149.7 10 100 10z" fill="#fff" stroke="#ccc" strokeWidth="2"/>
+                <ellipse cx="72" cy="88" rx="10" ry="12" fill="#2D2D2D"/>
+                <ellipse cx="128" cy="88" rx="10" ry="12" fill="#2D2D2D"/>
+                <path d="M72 125c8 12 16 16 28 16s20-4 28-16" fill="none" stroke="#2D2D2D" strokeWidth="6" strokeLinecap="round"/>
               </svg>
             )},
             { id: "google", name: "Google Maps", desc: "Navigation Google", logo: (
-              <svg width="22" height="22" viewBox="0 0 48 48">
-                <path d="M24 4c-7.73 0-14 6.27-14 14 0 10.5 14 26 14 26s14-15.5 14-26c0-7.73-6.27-14-14-14z" fill="#EA4335"/>
-                <path d="M24 4c-7.73 0-14 6.27-14 14 0 3.52 1.3 6.73 3.44 9.18L24 16l10.56 11.18A13.94 13.94 0 0 0 38 18c0-7.73-6.27-14-14-14z" fill="#4285F4"/>
-                <path d="M13.44 27.18C15.97 30.55 19.7 35.3 24 44c4.3-8.7 8.03-13.45 10.56-16.82L24 16 13.44 27.18z" fill="#FBBC04"/>
-                <path d="M34.56 27.18L24 16l-10.56 11.18C15.97 30.55 19.7 35.3 24 44c4.3-8.7 8.03-13.45 10.56-16.82z" fill="#34A853" opacity="0.6"/>
-                <circle cx="24" cy="18" r="5" fill="#fff"/>
+              <svg width="22" height="22" viewBox="0 0 92.3 132.3">
+                <path d="M60.2 2.2C55.8.8 51 0 46.1 0 32 0 19.3 6.4 10.8 16.5l21.8 18.3L60.2 2.2z" fill="#1a73e8"/>
+                <path d="M10.8 16.5C4.1 24.5 0 34.9 0 46.1c0 8.7 1.7 15.7 4.6 22l28-33.3L10.8 16.5z" fill="#ea4335"/>
+                <path d="M46.1 28.5c9.8 0 17.7 7.9 17.7 17.7 0 4.3-1.6 8.3-4.2 11.4 0 0 13.7-16.3 17.6-20.9 -5-9.1-13.2-16.2-23-19.5L32.6 34.8c3.5-3.8 8.4-6.3 13.5-6.3" fill="#4285f4"/>
+                <path d="M46.1 63.8c-9.8 0-17.7-7.9-17.7-17.7 0-4.3 1.5-8.3 4.1-11.3l-28 33.3c4.8 10.6 12.8 19.2 21 29.1l34.1-40.5c-3.5 4.1-8.5 7.1-13.5 7.1" fill="#fbbc04"/>
+                <path d="M59.6 83.5C73 65.2 92.3 50.6 92.3 46.1c0-7.1-1.4-13.8-3.9-20l-63 74.7c1.8 2.3 3.5 4.7 5 7.1 5.2 8.2 4.8 10.4 15.7 10.4s10.5-2.2 15.7-10.4c2.5-3.9 10.4-17.9-2.2-24.4" fill="#34a853"/>
               </svg>
             )},
             { id: "apple", name: "Apple Plans", desc: "Navigation Apple", logo: (
-              <svg width="22" height="22" viewBox="0 0 48 48">
-                <rect x="4" y="4" width="40" height="40" rx="10" fill="#007AFF"/>
-                <path d="M24 12c-4.97 0-9 4.03-9 9 0 6.75 9 17 9 17s9-10.25 9-17c0-4.97-4.03-9-9-9z" fill="#fff" opacity="0.95"/>
-                <circle cx="24" cy="21" r="3.5" fill="#007AFF"/>
-                <path d="M14 34l7-14 6 8 7-10" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.5"/>
+              <svg width="22" height="22" viewBox="0 0 100 100">
+                <rect width="100" height="100" rx="22" fill="#32DE84"/>
+                <path d="M50 20c-11 0-20 9-20 20 0 15 20 40 20 40s20-25 20-40c0-11-9-20-20-20z" fill="#fff"/>
+                <circle cx="50" cy="40" r="8" fill="#32DE84"/>
+                <path d="M20 65l15-10 15 8 15-12 15 8" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" opacity="0.6"/>
               </svg>
             )},
           ].map((app, i) => (
