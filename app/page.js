@@ -151,17 +151,18 @@ export default function Home() {
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [avatar, setAvatar] = useState(() => { if (typeof window === "undefined") return 0; return parseInt(localStorage.getItem("roadcrm-avatar") || "0"); });
   const [navApp, setNavApp] = useState(() => { if (typeof window === "undefined") return "waze"; return localStorage.getItem("roadcrm-nav") || "waze"; });
+  const [saved, setSaved] = useState(false);
 
   const userId = session?.user?.email || "unknown";
 
   const loadManualAppts = useCallback(async () => {
-    if (!userId || userId === "unknown") return [];
+    if (!supabase || !userId || userId === "unknown") return [];
     const { data } = await supabase.from("appointments").select("*").eq("user_id", userId).order("date", { ascending: true });
     return data ? data.map((a) => ({ ...a, source: "manual", manual: true })) : [];
   }, [userId]);
 
   const loadNotes = useCallback(async () => {
-    if (!userId || userId === "unknown") return;
+    if (!supabase || !userId || userId === "unknown") return;
     const { data } = await supabase.from("notes").select("*").eq("user_id", userId).order("created_at", { ascending: false });
     if (data) setNotes(data);
   }, [userId]);
@@ -192,7 +193,7 @@ export default function Home() {
   const getApptNotes = (apptId) => notes.filter((n) => n.appointment_id === apptId);
 
   const addAppt = async () => {
-    if (!fN.trim()) return;
+    if (!fN.trim() || !supabase) return;
     const id = uid();
     const newAppt = { id, user_id: userId, name: fN.trim(), address: fA.trim(), date: fD, time: fT, done: false };
     const { error } = await supabase.from("appointments").insert(newAppt);
@@ -207,11 +208,12 @@ export default function Home() {
     const appt = appts.find((a) => a.id === id);
     if (!appt) return;
     const newDone = !appt.done;
-    if (appt.source === "manual") await supabase.from("appointments").update({ done: newDone }).eq("id", id);
+    if (appt.source === "manual" && supabase) await supabase.from("appointments").update({ done: newDone }).eq("id", id);
     setAppts((prev) => prev.map((a) => a.id === id ? { ...a, done: newDone } : a));
   };
 
   const delAppt = async (id) => {
+    if (!supabase) return;
     await supabase.from("notes").delete().eq("appointment_id", id);
     await supabase.from("appointments").delete().eq("id", id);
     setAppts((prev) => prev.filter((a) => a.id !== id));
@@ -220,6 +222,7 @@ export default function Home() {
   };
 
   const delNote = async (id) => {
+    if (!supabase) return;
     await supabase.from("notes").delete().eq("id", id);
     setNotes((prev) => prev.filter((n) => n.id !== id));
   };
@@ -264,7 +267,7 @@ export default function Home() {
   };
 
   const saveVoice = async () => {
-    if (!trans.trim() || !voiceId) return;
+    if (!trans.trim() || !voiceId || !supabase) return;
     const note = { id: uid(), appointment_id: voiceId, user_id: userId, type: "voice", text: trans.trim(), delay: null };
     const { error } = await supabase.from("notes").insert(note);
     if (!error) setNotes((prev) => [{ ...note, created_at: new Date().toISOString() }, ...prev]);
@@ -278,7 +281,7 @@ export default function Home() {
 
   const openReminder = (id) => { setRemId(id); setRTxt(""); setRDel(null); setShowReminder(true); };
   const saveReminder = async () => {
-    if (!rTxt.trim() || !rDel || !remId) return;
+    if (!rTxt.trim() || !rDel || !remId || !supabase) return;
     const note = { id: uid(), appointment_id: remId, user_id: userId, type: "reminder", text: rTxt.trim(), delay: rDel };
     const { error } = await supabase.from("notes").insert(note);
     if (!error) setNotes((prev) => [{ ...note, created_at: new Date().toISOString() }, ...prev]);
@@ -428,14 +431,38 @@ export default function Home() {
         <h3 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-2">Navigation</h3>
         <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden mb-5 shadow-sm">
           {[
-            { id: "waze", name: "Waze", color: "#33CCFF", desc: "Navigation communautaire" },
-            { id: "google", name: "Google Maps", color: "#34A853", desc: "Navigation Google" },
-            { id: "apple", name: "Apple Plans", color: "#007AFF", desc: "Navigation Apple" },
+            { id: "waze", name: "Waze", desc: "Navigation communautaire", logo: (
+              <svg width="22" height="22" viewBox="0 0 48 48">
+                <path d="M24 4C12.95 4 4 12.95 4 24c0 6.08 2.72 11.54 7 15.2V44l5.6-3.2C19.4 41.6 21.6 42 24 42c11.05 0 20-8.95 20-20S35.05 4 24 4z" fill="#33CCFF"/>
+                <ellipse cx="18" cy="22" rx="3" ry="3.5" fill="#fff"/>
+                <ellipse cx="30" cy="22" rx="3" ry="3.5" fill="#fff"/>
+                <circle cx="18" cy="22.5" r="1.5" fill="#222"/>
+                <circle cx="30" cy="22.5" r="1.5" fill="#222"/>
+                <path d="M18 31c2 2.5 4.5 3.5 6 3.5s4-1 6-3.5" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            )},
+            { id: "google", name: "Google Maps", desc: "Navigation Google", logo: (
+              <svg width="22" height="22" viewBox="0 0 48 48">
+                <path d="M24 4c-7.73 0-14 6.27-14 14 0 10.5 14 26 14 26s14-15.5 14-26c0-7.73-6.27-14-14-14z" fill="#EA4335"/>
+                <path d="M24 4c-7.73 0-14 6.27-14 14 0 3.52 1.3 6.73 3.44 9.18L24 16l10.56 11.18A13.94 13.94 0 0 0 38 18c0-7.73-6.27-14-14-14z" fill="#4285F4"/>
+                <path d="M13.44 27.18C15.97 30.55 19.7 35.3 24 44c4.3-8.7 8.03-13.45 10.56-16.82L24 16 13.44 27.18z" fill="#FBBC04"/>
+                <path d="M34.56 27.18L24 16l-10.56 11.18C15.97 30.55 19.7 35.3 24 44c4.3-8.7 8.03-13.45 10.56-16.82z" fill="#34A853" opacity="0.6"/>
+                <circle cx="24" cy="18" r="5" fill="#fff"/>
+              </svg>
+            )},
+            { id: "apple", name: "Apple Plans", desc: "Navigation Apple", logo: (
+              <svg width="22" height="22" viewBox="0 0 48 48">
+                <rect x="4" y="4" width="40" height="40" rx="10" fill="#007AFF"/>
+                <path d="M24 12c-4.97 0-9 4.03-9 9 0 6.75 9 17 9 17s9-10.25 9-17c0-4.97-4.03-9-9-9z" fill="#fff" opacity="0.95"/>
+                <circle cx="24" cy="21" r="3.5" fill="#007AFF"/>
+                <path d="M14 34l7-14 6 8 7-10" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.5"/>
+              </svg>
+            )},
           ].map((app, i) => (
             <button key={app.id} onClick={() => { setNavApp(app.id); localStorage.setItem("roadcrm-nav", app.id); }}
               className={`w-full flex items-center gap-3 px-4 py-3 text-left active:bg-stone-50 ${i > 0 ? "border-t border-stone-100" : ""}`}>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: app.color + "15" }}>
-                <INav size={16} color={app.color} />
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-stone-50">
+                {app.logo}
               </div>
               <div className="flex-1">
                 <p className="text-[13px] font-medium text-stone-800">{app.name}</p>
@@ -445,6 +472,17 @@ export default function Home() {
             </button>
           ))}
         </div>
+
+        {/* Save */}
+        <button onClick={() => {
+          localStorage.setItem("roadcrm-avatar", String(avatar));
+          localStorage.setItem("roadcrm-nav", navApp);
+          setSaved(true);
+          setTimeout(() => setSaved(false), 2000);
+        }}
+          className={`w-full flex items-center justify-center gap-2 py-3 text-[13px] font-semibold rounded-2xl shadow-sm active:scale-[0.98] transition-all mb-3 ${saved ? "bg-green-600 text-white" : "bg-stone-900 text-white"}`}>
+          {saved ? <><ICheck size={16} color="#fff" sw={2.5} /> Sauvegardé !</> : <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Sauvegarder</>}
+        </button>
 
         {/* Logout */}
         <button onClick={() => { if (window.confirm("Se déconnecter ?")) signOut(); }}
