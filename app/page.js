@@ -44,6 +44,58 @@ const INote = (p) => <I d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2
 const IClose = (p) => <I d="M18 6L6 18 M6 6l12 12" {...p} />;
 const ISearch = (p) => <I d="M11 3a8 8 0 1 0 0 16 8 8 0 0 0 0-16z M21 21l-4.35-4.35" {...p} />;
 const ISettings = (p) => <I d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" {...p} />;
+const IHome = (p) => <I d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10" {...p} />;
+
+// ─── Bottom Navigation Bar ───────────────────────────
+const BottomNav = ({ view, setView, notes }) => (
+  <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-stone-200 safe-nav-bottom">
+    <div className="flex items-center justify-around px-2 py-1.5">
+      {[
+        { id: "home", icon: IHome, label: "Accueil" },
+        { id: "search", icon: ISearch, label: "Recherche" },
+        { id: "notes", icon: INote, label: "Notes" },
+        { id: "settings", icon: ISettings, label: "Réglages" },
+      ].map((tab) => {
+        const active = view === tab.id;
+        const Icon = tab.icon;
+        return (
+          <button key={tab.id} onClick={() => setView(tab.id)}
+            className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all ${active ? "text-blue-600" : "text-stone-400 active:text-stone-600"}`}>
+            <div className="relative">
+              <Icon size={20} color={active ? "#2563EB" : "#9CA3AF"} sw={active ? 2 : 1.8} />
+              {tab.id === "notes" && notes.length > 0 && <div className="absolute -top-1 -right-1.5 w-2 h-2 rounded-full bg-blue-600" />}
+            </div>
+            <span className={`text-[10px] font-medium ${active ? "text-blue-600" : "text-stone-400"}`}>{tab.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  </div>
+);
+
+// ─── Skeleton Components ─────────────────────────────
+const SkeletonCard = () => (
+  <div className="bg-white border border-stone-200 rounded-2xl px-4 py-3.5 shadow-sm animate-scale-in">
+    <div className="flex justify-between items-start">
+      <div className="flex-1">
+        <div className="skeleton h-4 w-36 mb-2" />
+        <div className="skeleton h-3 w-48" />
+      </div>
+      <div className="skeleton h-8 w-8 rounded-full" />
+    </div>
+  </div>
+);
+
+const SkeletonNextAppt = () => (
+  <div className="mx-5 mb-3 p-3 bg-white border border-stone-200 rounded-2xl flex items-center justify-between gap-3 shadow-sm animate-scale-in">
+    <div className="flex-1">
+      <div className="skeleton h-2.5 w-16 mb-2" />
+      <div className="skeleton h-4 w-32 mb-1.5" />
+      <div className="skeleton h-3 w-44" />
+    </div>
+    <div className="skeleton w-10 h-10 rounded-full" />
+  </div>
+);
 
 const getCalDays = (year, month) => {
   const first = new Date(year, month, 1);
