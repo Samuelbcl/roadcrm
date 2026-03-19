@@ -91,6 +91,7 @@ export default function Home() {
   const [remId, setRemId] = useState(null);
   const [rTxt, setRTxt] = useState("");
   const [rDel, setRDel] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const [notesTab, setNotesTab] = useState("voice"); // voice | reminder
 
   const userId = session?.user?.email || "unknown";
@@ -138,7 +139,15 @@ export default function Home() {
     const newAppt = { id, user_id: userId, name: fN.trim(), address: fA.trim(), date: fD, time: fT, done: false };
     const { error } = await supabase.from("appointments").insert(newAppt);
     if (error) { console.error(error); return; }
-    setAppts((prev) => [...prev, { ...newAppt, source: "manual", manual: true }].sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`)));
+    let googleId = null;
+    if (session?.accessToken) {
+      try {
+        const res = await fetch("/api/calendar/create", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: session.accessToken, summary: fN.trim(), location: fA.trim(), date: fD, time: fT }) });
+        const data = await res.json();
+        if (data.id) googleId = data.id;
+      } catch (err) { console.error("Google create error:", err); }
+    }
+    setAppts((prev) => [...prev, { ...newAppt, source: "manual", manual: true, googleId }].sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`)));
     const [y, m, d] = fD.split("-").map(Number);
     setSelDate(new Date(y, m - 1, d)); setCMonth(m - 1); setCYear(y);
     setFN(""); setFA(""); setFT("09:00"); setFD(toKey(new Date())); setShowForm(false);
@@ -153,14 +162,19 @@ export default function Home() {
   };
 
   const delAppt = async (id) => {
+    const appt = appts.find((a) => a.id === id);
     await supabase.from("notes").delete().eq("appointment_id", id);
     await supabase.from("appointments").delete().eq("id", id);
+    if (session?.accessToken && (appt?.googleId || appt?.source === "google")) {
+      try { await fetch("/api/calendar/create", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: session.accessToken, eventId: appt.googleId || appt.id }) }); } catch (err) { console.error(err); }
+    }
     setAppts((prev) => prev.filter((a) => a.id !== id));
     setNotes((prev) => prev.filter((n) => n.appointment_id !== id));
+    setConfirmDelete(null);
     setView("home");
   };
-
   const delNote = async (id) => {
+    if (!confirm("Supprimer cette note ?")) return;
     await supabase.from("notes").delete().eq("id", id);
     setNotes((prev) => prev.filter((n) => n.id !== id));
   };
@@ -351,7 +365,16 @@ export default function Home() {
           </button>
         </div>
 
-        {sel.source === "manual" && <button onClick={() => delAppt(sel.id)} className="w-full flex items-center justify-center gap-2 py-2.5 text-[13px] font-medium text-red-600 rounded-xl active:bg-red-50"><ITrash size={15} color="#DC2626" /> Supprimer</button>}
+        {sel.source === "manual" && !confirmDelete && <button onClick={() => setConfirmDelete(sel.id)} className="w-full flex items-center justify-center gap-2 py-2.5 text-[13px] font-medium text-red-600 rounded-xl active:bg-red-50"><ITrash size={15} color="#DC2626" /> Supprimer</button>}
+        {confirmDelete === sel.id && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mt-2">
+            <p className="text-[13px] text-stone-800 font-medium text-center mb-3">Supprimer ce rendez-vous ?</p>
+            <div className="flex gap-2">
+              <button onClick={() => setConfirmDelete(null)} className="flex-1 py-2 rounded-lg bg-white border border-stone-200 text-[13px] font-semibold text-stone-600">Annuler</button>
+              <button onClick={() => delAppt(sel.id)} className="flex-1 py-2 rounded-lg bg-red-600 text-[13px] font-semibold text-white">Supprimer</button>
+            </div>
+          </div>
+        )}
 
         {selNotes.length > 0 && (
           <div className="mt-5">
