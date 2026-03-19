@@ -93,9 +93,12 @@ export default function Home() {
   const [remId, setRemId] = useState(null);
   const [rTxt, setRTxt] = useState("");
   const [rDel, setRDel] = useState(null);
-  const [notesTab, setNotesTab] = useState("voice"); // voice | reminder
+  const [notesTab, setNotesTab] = useState("voice");
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [avatar, setAvatar] = useState(() => { if (typeof window === "undefined") return 0; return parseInt(localStorage.getItem("roadcrm-avatar") || "0"); });
+  const [navApp, setNavApp] = useState(() => { if (typeof window === "undefined") return "waze"; return localStorage.getItem("roadcrm-nav") || "waze"; });
 
   const userId = session?.user?.email || "unknown";
 
@@ -169,7 +172,13 @@ export default function Home() {
     setNotes((prev) => prev.filter((n) => n.id !== id));
   };
 
-  const openWaze = (addr) => { if (!addr) return; window.location.href = `https://waze.com/ul?q=${encodeURIComponent(addr)}&navigate=yes`; };
+  const openNav = (addr) => {
+    if (!addr) return;
+    const encoded = encodeURIComponent(addr);
+    if (navApp === "waze") window.location.href = `https://waze.com/ul?q=${encoded}&navigate=yes`;
+    else if (navApp === "google") window.location.href = `https://www.google.com/maps/dir/?api=1&destination=${encoded}`;
+    else window.location.href = `https://maps.apple.com/?daddr=${encoded}`;
+  };
 
   // ─── Voice (CONTINUOUS MODE + RESUME) ───────────────────────────
   const startVoice = (id) => { setVoiceId(id); setTrans(""); setRec(false); setShowVoice(true); };
@@ -287,6 +296,29 @@ export default function Home() {
     return GROUP_ORDER.filter((g) => groups[g]).map((g) => ({ label: g, items: groups[g] }));
   };
 
+  // ═══════════════════ AVATARS ═══════════════════════════════════════
+  const avatars = [
+    { bg: "#DBEAFE", hair: "#1E3A5F", skin: "#F5D0A9", shirt: "#2563EB" },
+    { bg: "#FEF3C7", hair: "#92400E", skin: "#D4A574", shirt: "#D97706" },
+    { bg: "#D1FAE5", hair: "#064E3B", skin: "#F5D0A9", shirt: "#059669" },
+    { bg: "#EDE9FE", hair: "#4C1D95", skin: "#E8C4A0", shirt: "#7C3AED" },
+    { bg: "#FFE4E6", hair: "#9F1239", skin: "#F5D0A9", shirt: "#E11D48" },
+    { bg: "#F0FDF4", hair: "#1A1A1A", skin: "#8D5524", shirt: "#16A34A" },
+    { bg: "#FFF7ED", hair: "#EA580C", skin: "#F5D0A9", shirt: "#F97316" },
+    { bg: "#F1F5F9", hair: "#334155", skin: "#D4A574", shirt: "#475569" },
+  ];
+  const AvatarSvg = ({ a, size = 40 }) => (
+    <svg width={size} height={size} viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="20" fill={a.bg} />
+      <ellipse cx="20" cy="30" rx="12" ry="10" fill={a.shirt} />
+      <circle cx="20" cy="16" r="9" fill={a.skin} />
+      <ellipse cx="20" cy="10" rx="9.5" ry="6" fill={a.hair} />
+      <circle cx="16" cy="16" r="1.2" fill="#1A1A1A" />
+      <circle cx="24" cy="16" r="1.2" fill="#1A1A1A" />
+      <ellipse cx="20" cy="20" rx="2.5" ry="1" fill="#E8A07E" />
+    </svg>
+  );
+
   // ═══════════════════ SETTINGS VIEW ════════════════════════════════
   if (view === "settings") return (
     <div className="min-h-screen bg-stone-100">
@@ -296,16 +328,30 @@ export default function Home() {
         <p className="text-[12px] text-stone-400 mb-4">{session?.user?.email}</p>
       </div>
       <div className="px-5 pb-20">
-        {/* Account */}
+        {/* Account + Avatar */}
         <h3 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-2">Compte</h3>
-        <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden divide-y divide-stone-100 mb-5 shadow-sm">
-          <div className="flex items-center gap-3 px-4 py-3">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[13px] font-bold text-blue-600">{session?.user?.name?.charAt(0) || "?"}</div>
+        <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden mb-5 shadow-sm">
+          <button onClick={() => setShowAvatarPicker(!showAvatarPicker)} className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-stone-50">
+            <AvatarSvg a={avatars[avatar]} size={44} />
             <div className="flex-1">
               <p className="text-[13px] font-medium text-stone-800">{session?.user?.name || "Utilisateur"}</p>
-              <p className="text-[11px] text-stone-400">{session?.user?.email}</p>
+              <p className="text-[11px] text-stone-400">Changer d{"'"}avatar</p>
             </div>
-          </div>
+            <IChev />
+          </button>
+          {showAvatarPicker && (
+            <div className="px-4 py-3 border-t border-stone-100">
+              <p className="text-[11px] text-stone-400 mb-2">Choisis ton avatar</p>
+              <div className="flex flex-wrap gap-2">
+                {avatars.map((a, i) => (
+                  <button key={i} onClick={() => { setAvatar(i); localStorage.setItem("roadcrm-avatar", String(i)); setShowAvatarPicker(false); }}
+                    className={`rounded-full p-0.5 transition-all ${avatar === i ? "ring-2 ring-blue-500 ring-offset-2" : ""}`}>
+                    <AvatarSvg a={a} size={40} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Notifications */}
@@ -326,35 +372,26 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Navigation */}
+        {/* Navigation picker */}
         <h3 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-2">Navigation</h3>
-        <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden divide-y divide-stone-100 mb-5 shadow-sm">
-          <div className="flex items-center gap-3 px-4 py-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center"><INav size={16} color="#2563EB" /></div>
-            <div className="flex-1">
-              <p className="text-[13px] font-medium text-stone-800">Application GPS</p>
-              <p className="text-[11px] text-stone-400">Waze</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Data */}
-        <h3 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-2">Données</h3>
-        <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden divide-y divide-stone-100 mb-5 shadow-sm">
-          <div className="flex items-center gap-3 px-4 py-3">
-            <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center"><ICheck size={16} color="#16A34A" /></div>
-            <div className="flex-1">
-              <p className="text-[13px] font-medium text-stone-800">Google Calendar</p>
-              <p className="text-[11px] text-stone-400">Connecté · Synchro bidirectionnelle</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 px-4 py-3">
-            <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center"><ICheck size={16} color="#16A34A" /></div>
-            <div className="flex-1">
-              <p className="text-[13px] font-medium text-stone-800">Supabase Cloud</p>
-              <p className="text-[11px] text-stone-400">Connecté · {appts.filter((a) => a.source === "manual").length} RDV · {notes.length} notes</p>
-            </div>
-          </div>
+        <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden mb-5 shadow-sm">
+          {[
+            { id: "waze", name: "Waze", color: "#33CCFF", desc: "Navigation communautaire" },
+            { id: "google", name: "Google Maps", color: "#34A853", desc: "Navigation Google" },
+            { id: "apple", name: "Apple Plans", color: "#007AFF", desc: "Navigation Apple" },
+          ].map((app, i) => (
+            <button key={app.id} onClick={() => { setNavApp(app.id); localStorage.setItem("roadcrm-nav", app.id); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 text-left active:bg-stone-50 ${i > 0 ? "border-t border-stone-100" : ""}`}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: app.color + "15" }}>
+                <INav size={16} color={app.color} />
+              </div>
+              <div className="flex-1">
+                <p className="text-[13px] font-medium text-stone-800">{app.name}</p>
+                <p className="text-[11px] text-stone-400">{app.desc}</p>
+              </div>
+              {navApp === app.id && <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center"><ICheck size={12} color="#fff" sw={2.5} /></div>}
+            </button>
+          ))}
         </div>
 
         {/* Logout */}
@@ -434,7 +471,7 @@ export default function Home() {
                         <p className="text-[11px] text-stone-400 mt-0.5">{new Date(a.date + "T00:00").toLocaleDateString("fr-BE", { day: "numeric", month: "short" })} à {a.time}</p>
                       </div>
                       <div className="flex items-center gap-2 ml-3 flex-shrink-0">
-                        {a.address && <button onClick={(e) => { e.stopPropagation(); openWaze(a.address); }} className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center active:scale-95"><INav size={14} color="#fff" /></button>}
+                        {a.address && <button onClick={(e) => { e.stopPropagation(); openNav(a.address); }} className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center active:scale-95"><INav size={14} color="#fff" /></button>}
                       </div>
                     </div>
                     {aNotes.length > 0 && (
@@ -522,7 +559,7 @@ export default function Home() {
         <p className="text-[13px] text-stone-500 leading-relaxed mb-5">{sel.address || "Aucune adresse"}</p>
 
         <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden divide-y divide-stone-100 mb-5 shadow-sm">
-          <button onClick={() => openWaze(sel.address)} className="w-full flex items-center gap-3 px-4 py-3 text-left text-[13px] font-medium text-stone-800 active:bg-stone-50" style={{ opacity: sel.address ? 1 : 0.4 }}>
+          <button onClick={() => openNav(sel.address)} className="w-full flex items-center gap-3 px-4 py-3 text-left text-[13px] font-medium text-stone-800 active:bg-stone-50" style={{ opacity: sel.address ? 1 : 0.4 }}>
             <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center"><INav size={16} color="#2563EB" /></div>Lancer Waze<span className="ml-auto"><IChev /></span>
           </button>
           <button onClick={() => startVoice(sel.id)} className="w-full flex items-center gap-3 px-4 py-3 text-left text-[13px] font-medium text-stone-800 active:bg-stone-50">
@@ -636,7 +673,7 @@ export default function Home() {
             <p className="text-[14px] font-semibold truncate">{nextAppt.name}</p>
             <p className="text-[12px] text-stone-500 truncate mt-0.5">{nextAppt.time}{nextAppt.address ? ` · ${nextAppt.address}` : ""}</p>
           </div>
-          {nextAppt.address && <button onClick={() => openWaze(nextAppt.address)} className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 active:scale-95"><INav size={16} color="#fff" /></button>}
+          {nextAppt.address && <button onClick={() => openNav(nextAppt.address)} className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 active:scale-95"><INav size={16} color="#fff" /></button>}
         </div>
       )}
 
@@ -683,7 +720,7 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-2 ml-3 flex-shrink-0">
                   <span className="font-mono text-[12px] text-stone-500 font-medium">{a.time}</span>
-                  {a.address && <button onClick={(e) => { e.stopPropagation(); openWaze(a.address); }} className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center active:scale-95"><INav size={14} color="#fff" /></button>}
+                  {a.address && <button onClick={(e) => { e.stopPropagation(); openNav(a.address); }} className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center active:scale-95"><INav size={14} color="#fff" /></button>}
                 </div>
               </div>
               {aNotes.length > 0 && (
