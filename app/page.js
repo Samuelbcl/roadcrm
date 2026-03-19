@@ -646,28 +646,30 @@ export default function Home() {
     </div>
   );
 
+  const doneCount = todayAppts.filter((a) => a.done).length;
+  const totalCount = todayAppts.length;
+
   // ═══════════════════ HOME VIEW ══════════════════════════════════
   return (
-    <div className="min-h-screen bg-stone-100">
+    <div className="min-h-screen bg-stone-100 animate-view-in">
       <div className="px-5 pt-5 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-2.5"><div className="w-2.5 h-2.5 rounded-full bg-blue-600" /><h1 className="text-[17px] font-bold tracking-tight">RoadCRM</h1></div>
-        <div className="flex items-center gap-0.5">
-          <button onClick={() => setView("search")} className="p-2 rounded-lg active:bg-stone-200">
-            <ISearch size={16} color="#6B6B6B" />
-          </button>
-          <button onClick={() => setView("notes")} className="p-2 rounded-lg active:bg-stone-200 relative">
-            <INote size={16} color="#6B6B6B" />
-            {notes.length > 0 && <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-blue-600" />}
-          </button>
-          <button onClick={fetchAll} className={`p-2 rounded-lg active:bg-stone-200 ${loading ? "animate-spin" : ""}`}><IRefresh size={16} color="#9CA3AF" /></button>
-          <button onClick={() => setView("settings")} className="p-2 rounded-lg active:bg-stone-200"><ISettings size={16} color="#9CA3AF" /></button>
-        </div>
+        <button onClick={fetchAll} className={`p-2 rounded-lg active:bg-stone-200 ${loading ? "animate-spin" : ""}`}><IRefresh size={16} color="#9CA3AF" /></button>
       </div>
 
-      <div className="px-5 mb-3"><p className="text-[12px] text-stone-400">{todayAppts.length} RDV aujourd{"'"}hui · {todayAppts.filter((a) => a.done).length} terminé{todayAppts.filter((a) => a.done).length !== 1 ? "s" : ""}</p></div>
+      <div className="px-5 mb-3">
+        <p className="text-[12px] text-stone-400">{totalCount} RDV aujourd{"'"}hui · {doneCount} terminé{doneCount !== 1 ? "s" : ""}</p>
+        {totalCount > 0 && (
+          <div className="mt-1.5 h-1.5 bg-stone-200 rounded-full overflow-hidden">
+            <div className="h-full bg-blue-600 rounded-full animate-progress" style={{ width: `${totalCount > 0 ? (doneCount / totalCount) * 100 : 0}%` }} />
+          </div>
+        )}
+      </div>
 
-      {nextAppt && (
-        <div className="mx-5 mb-3 p-3 bg-white border border-stone-200 rounded-2xl flex items-center justify-between gap-3 shadow-sm">
+      {loading ? (
+        <SkeletonNextAppt />
+      ) : nextAppt ? (
+        <div className="mx-5 mb-3 p-3 bg-white border border-stone-200 rounded-2xl flex items-center justify-between gap-3 shadow-sm animate-scale-in">
           <div className="min-w-0">
             <p className="text-[10px] font-semibold text-blue-600 uppercase tracking-wider">Prochain</p>
             <p className="text-[14px] font-semibold truncate">{nextAppt.name}</p>
@@ -675,7 +677,7 @@ export default function Home() {
           </div>
           {nextAppt.address && <button onClick={() => openNav(nextAppt.address)} className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 active:scale-95"><INav size={16} color="#fff" /></button>}
         </div>
-      )}
+      ) : null}
 
       <div className="mx-5 mt-1 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2.5">
@@ -702,14 +704,21 @@ export default function Home() {
         <p className="text-[12px] text-stone-400 mt-0.5">{dayAppts.length === 0 ? "Aucun rendez-vous" : `${dayAppts.length} rendez-vous`}{selKey === todayKey && " · Aujourd'hui"}</p>
       </div>
 
-      <div className="px-5 flex flex-col gap-1.5 pb-28">
-        {dayAppts.length === 0 ? (
-          <div className="text-center py-8"><p className="text-[13px] text-stone-400">Rien de prévu.</p></div>
-        ) : dayAppts.map((a) => {
+      <div className="px-5 flex flex-col gap-1.5 pb-32">
+        {loading ? (
+          <>{[0, 1, 2].map((i) => <SkeletonCard key={i} />)}</>
+        ) : dayAppts.length === 0 ? (
+          <div className="text-center py-10 animate-fade-in">
+            <div className="w-12 h-12 rounded-full bg-stone-200 flex items-center justify-center mx-auto mb-3"><ICal size={22} color="#9CA3AF" /></div>
+            <p className="text-[13px] text-stone-500 font-medium">Rien de prévu</p>
+            <p className="text-[12px] text-stone-400 mt-1">Ajoute un rendez-vous avec le bouton +</p>
+          </div>
+        ) : dayAppts.map((a, idx) => {
           const aNotes = getApptNotes(a.id);
           return (
             <div key={a.id} onClick={() => { setSelId(a.id); setView("detail"); }}
-              className={`bg-white border rounded-2xl px-4 py-3 active:bg-stone-50 shadow-sm ${a.done ? "border-green-200 bg-green-50/30" : "border-stone-200"}`}>
+              className={`bg-white border rounded-2xl px-4 py-3 active:bg-stone-50 shadow-sm animate-list-item ${a.done ? "border-green-200 bg-green-50/30" : "border-stone-200"}`}
+              style={{ animationDelay: `${idx * 60}ms` }}>
               <div className="flex justify-between items-start">
                 <div className="flex items-start gap-2.5 min-w-0 flex-1">
                   {a.done && <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 mt-0.5"><ICheck size={12} color="#fff" sw={2.5} /></div>}
@@ -733,7 +742,7 @@ export default function Home() {
         })}
       </div>
 
-      <button onClick={() => { setFD(selKey); setShowForm(true); }} className="fixed bottom-7 right-5 w-12 h-12 rounded-full bg-stone-900 flex items-center justify-center shadow-lg active:scale-95 z-40"><IPlus size={22} color="#fff" /></button>
+      <button onClick={() => { setFD(selKey); setShowForm(true); }} className="fixed bottom-20 right-5 w-12 h-12 rounded-full bg-stone-900 flex items-center justify-center shadow-lg active:scale-95 z-40"><IPlus size={22} color="#fff" /></button>
 
       <Sheet open={showForm} onClose={() => setShowForm(false)}>
         <h2 className="text-base font-bold mb-3">Nouveau rendez-vous</h2>
@@ -748,6 +757,7 @@ export default function Home() {
         <button onClick={addAppt} className="w-full py-2.5 bg-stone-900 text-white rounded-lg text-[14px] font-semibold" style={{ opacity: fN.trim() ? 1 : 0.35 }}>Ajouter</button>
         <button onClick={() => setShowForm(false)} className="w-full py-2 text-[13px] text-stone-500 font-medium mt-1.5 mb-4">Annuler</button>
       </Sheet>
+      <BottomNav view={view} setView={setView} notes={notes} />
     </div>
   );
 }
