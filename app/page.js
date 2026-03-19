@@ -155,13 +155,13 @@ export default function Home() {
   const userId = session?.user?.email || "unknown";
 
   const loadManualAppts = useCallback(async () => {
-    if (!userId || userId === "unknown") return [];
+    if (!supabase || !userId || userId === "unknown") return [];
     const { data } = await supabase.from("appointments").select("*").eq("user_id", userId).order("date", { ascending: true });
     return data ? data.map((a) => ({ ...a, source: "manual", manual: true })) : [];
   }, [userId]);
 
   const loadNotes = useCallback(async () => {
-    if (!userId || userId === "unknown") return;
+    if (!supabase || !userId || userId === "unknown") return;
     const { data } = await supabase.from("notes").select("*").eq("user_id", userId).order("created_at", { ascending: false });
     if (data) setNotes(data);
   }, [userId]);
@@ -192,7 +192,7 @@ export default function Home() {
   const getApptNotes = (apptId) => notes.filter((n) => n.appointment_id === apptId);
 
   const addAppt = async () => {
-    if (!fN.trim()) return;
+    if (!fN.trim() || !supabase) return;
     const id = uid();
     const newAppt = { id, user_id: userId, name: fN.trim(), address: fA.trim(), date: fD, time: fT, done: false };
     const { error } = await supabase.from("appointments").insert(newAppt);
@@ -207,11 +207,12 @@ export default function Home() {
     const appt = appts.find((a) => a.id === id);
     if (!appt) return;
     const newDone = !appt.done;
-    if (appt.source === "manual") await supabase.from("appointments").update({ done: newDone }).eq("id", id);
+    if (appt.source === "manual" && supabase) await supabase.from("appointments").update({ done: newDone }).eq("id", id);
     setAppts((prev) => prev.map((a) => a.id === id ? { ...a, done: newDone } : a));
   };
 
   const delAppt = async (id) => {
+    if (!supabase) return;
     await supabase.from("notes").delete().eq("appointment_id", id);
     await supabase.from("appointments").delete().eq("id", id);
     setAppts((prev) => prev.filter((a) => a.id !== id));
@@ -220,6 +221,7 @@ export default function Home() {
   };
 
   const delNote = async (id) => {
+    if (!supabase) return;
     await supabase.from("notes").delete().eq("id", id);
     setNotes((prev) => prev.filter((n) => n.id !== id));
   };
@@ -264,7 +266,7 @@ export default function Home() {
   };
 
   const saveVoice = async () => {
-    if (!trans.trim() || !voiceId) return;
+    if (!trans.trim() || !voiceId || !supabase) return;
     const note = { id: uid(), appointment_id: voiceId, user_id: userId, type: "voice", text: trans.trim(), delay: null };
     const { error } = await supabase.from("notes").insert(note);
     if (!error) setNotes((prev) => [{ ...note, created_at: new Date().toISOString() }, ...prev]);
@@ -278,7 +280,7 @@ export default function Home() {
 
   const openReminder = (id) => { setRemId(id); setRTxt(""); setRDel(null); setShowReminder(true); };
   const saveReminder = async () => {
-    if (!rTxt.trim() || !rDel || !remId) return;
+    if (!rTxt.trim() || !rDel || !remId || !supabase) return;
     const note = { id: uid(), appointment_id: remId, user_id: userId, type: "reminder", text: rTxt.trim(), delay: rDel };
     const { error } = await supabase.from("notes").insert(note);
     if (!error) setNotes((prev) => [{ ...note, created_at: new Date().toISOString() }, ...prev]);
