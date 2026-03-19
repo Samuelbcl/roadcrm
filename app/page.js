@@ -42,6 +42,7 @@ const ILogout = (p) => <I d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-
 const ICal = (p) => <I d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z M16 2v4 M8 2v4 M3 10h18" {...p} />;
 const INote = (p) => <I d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8" {...p} />;
 const IClose = (p) => <I d="M18 6L6 18 M6 6l12 12" {...p} />;
+const ISearch = (p) => <I d="M11 3a8 8 0 1 0 0 16 8 8 0 0 0 0-16z M21 21l-4.35-4.35" {...p} />;
 
 const getCalDays = (year, month) => {
   const first = new Date(year, month, 1);
@@ -92,6 +93,8 @@ export default function Home() {
   const [rTxt, setRTxt] = useState("");
   const [rDel, setRDel] = useState(null);
   const [notesTab, setNotesTab] = useState("voice"); // voice | reminder
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
 
   const userId = session?.user?.email || "unknown";
 
@@ -283,6 +286,70 @@ export default function Home() {
     return GROUP_ORDER.filter((g) => groups[g]).map((g) => ({ label: g, items: groups[g] }));
   };
 
+  // ═══════════════════ SEARCH VIEW ══════════════════════════════════
+  const searchResults = searchQuery.trim().length >= 2 ? appts.filter((a) => {
+    const q = searchQuery.toLowerCase();
+    const aNotes = getApptNotes(a.id);
+    return a.name.toLowerCase().includes(q) || (a.address && a.address.toLowerCase().includes(q)) || aNotes.some((n) => n.text.toLowerCase().includes(q));
+  }) : [];
+
+  if (view === "search") return (
+    <div className="min-h-screen bg-stone-100">
+      <div className="px-5 pt-4 pb-2">
+        <div className="flex items-center gap-3">
+          <button onClick={() => { setView("home"); setSearchQuery(""); setShowSearch(false); }} className="flex-shrink-0"><IBack size={18} color="#6B6B6B" /></button>
+          <div className="flex-1 relative">
+            <input
+              className="w-full px-3 py-2.5 pl-9 bg-white border border-stone-200 rounded-xl text-[14px] outline-none focus:border-blue-500 transition shadow-sm"
+              placeholder="Chercher un client, une adresse, une note..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoFocus
+            />
+            <ISearch size={16} color="#9CA3AF" style={{ position: "absolute", left: 10, top: 11 }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="px-5 pt-2 pb-20">
+        {searchQuery.trim().length < 2 ? (
+          <p className="text-[13px] text-stone-400 text-center py-8">Tape au moins 2 caractères</p>
+        ) : searchResults.length === 0 ? (
+          <p className="text-[13px] text-stone-400 text-center py-8">Aucun résultat pour "{searchQuery}"</p>
+        ) : (
+          <>
+            <p className="text-[12px] text-stone-400 mb-3">{searchResults.length} résultat{searchResults.length !== 1 ? "s" : ""}</p>
+            <div className="flex flex-col gap-1.5">
+              {searchResults.map((a) => {
+                const aNotes = getApptNotes(a.id);
+                return (
+                  <div key={a.id} onClick={() => { setSelId(a.id); setView("detail"); }}
+                    className={`bg-white border border-stone-200 rounded-2xl px-4 py-3 active:bg-stone-50 shadow-sm ${a.done ? "opacity-40" : ""}`}>
+                    <div className="flex justify-between items-start">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[14px] font-semibold leading-snug">{a.name}</p>
+                        <p className="text-[12px] text-stone-500 mt-0.5 truncate">{a.address || "Pas d'adresse"}</p>
+                        <p className="text-[11px] text-stone-400 mt-0.5">{new Date(a.date + "T00:00").toLocaleDateString("fr-BE", { day: "numeric", month: "short" })} à {a.time}</p>
+                      </div>
+                      <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                        {a.address && <button onClick={(e) => { e.stopPropagation(); openWaze(a.address); }} className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center active:scale-95"><INav size={14} color="#fff" /></button>}
+                      </div>
+                    </div>
+                    {aNotes.length > 0 && (
+                      <div className="flex gap-1 mt-2 flex-wrap">
+                        {aNotes.slice(0, 2).map((n) => <span key={n.id} className="text-[11px] text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full flex items-center gap-1">{n.type === "voice" ? <IMic size={10} /> : <IBell size={10} />} {n.text.length > 20 ? n.text.slice(0, 20) + "…" : n.text}</span>)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
   // ═══════════════════ NOTES VIEW ═════════════════════════════════
   if (view === "notes") {
     const activeNotes = notesTab === "voice" ? voiceNotes : reminderNotes;
@@ -295,12 +362,12 @@ export default function Home() {
           {/* Tabs */}
           <div className="flex bg-white rounded-xl border border-stone-200 p-1 shadow-sm">
             <button onClick={() => setNotesTab("voice")}
-              className={`flex-1 py-2 rounded-lg text-[13px] font-semibold transition-all ${notesTab === "voice" ? "bg-stone-900 text-white" : "text-stone-500"}`}>
-              🎤 Vocales ({voiceNotes.length})
+              className={`flex-1 py-2 rounded-lg text-[13px] font-semibold transition-all flex items-center justify-center gap-1.5 ${notesTab === "voice" ? "bg-stone-900 text-white" : "text-stone-500"}`}>
+              <IMic size={14} /> Vocales ({voiceNotes.length})
             </button>
             <button onClick={() => setNotesTab("reminder")}
-              className={`flex-1 py-2 rounded-lg text-[13px] font-semibold transition-all ${notesTab === "reminder" ? "bg-stone-900 text-white" : "text-stone-500"}`}>
-              🔔 Rappels ({reminderNotes.length})
+              className={`flex-1 py-2 rounded-lg text-[13px] font-semibold transition-all flex items-center justify-center gap-1.5 ${notesTab === "reminder" ? "bg-stone-900 text-white" : "text-stone-500"}`}>
+              <IBell size={14} /> Rappels ({reminderNotes.length})
             </button>
           </div>
         </div>
@@ -446,6 +513,9 @@ export default function Home() {
       <div className="px-5 pt-5 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-2.5"><div className="w-2.5 h-2.5 rounded-full bg-blue-600" /><h1 className="text-[17px] font-bold tracking-tight">RoadCRM</h1></div>
         <div className="flex items-center gap-0.5">
+          <button onClick={() => setView("search")} className="p-2 rounded-lg active:bg-stone-200">
+            <ISearch size={16} color="#6B6B6B" />
+          </button>
           <button onClick={() => setView("notes")} className="p-2 rounded-lg active:bg-stone-200 relative">
             <INote size={16} color="#6B6B6B" />
             {notes.length > 0 && <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-blue-600" />}
@@ -513,7 +583,7 @@ export default function Home() {
               </div>
               {aNotes.length > 0 && (
                 <div className="flex gap-1 mt-2 flex-wrap">
-                  {aNotes.slice(0, 2).map((n) => <span key={n.id} className="text-[11px] text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full">{n.type === "voice" ? "🎤" : "🔔"} {n.text.length > 20 ? n.text.slice(0, 20) + "…" : n.text}</span>)}
+                  {aNotes.slice(0, 2).map((n) => <span key={n.id} className="text-[11px] text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full flex items-center gap-1">{n.type === "voice" ? <IMic size={10} /> : <IBell size={10} />} {n.text.length > 20 ? n.text.slice(0, 20) + "…" : n.text}</span>)}
                 </div>
               )}
             </div>
