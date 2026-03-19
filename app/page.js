@@ -1,5 +1,4 @@
 "use client";
-console.log("SUPABASE URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { supabase } from "@/lib/supabase";
@@ -10,7 +9,21 @@ const toKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDat
 const DAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 const MONTHS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
-// ─── Icons ─────────────────────────────────────────────────────────
+// Date grouping helper
+const getDateGroup = (isoDate) => {
+  const d = new Date(isoDate);
+  const now = new Date();
+  const todayKey = toKey(now);
+  const dKey = toKey(d);
+  if (dKey === todayKey) return "Aujourd'hui";
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+  if (dKey === toKey(yesterday)) return "Hier";
+  const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7);
+  if (d >= weekAgo) return "Cette semaine";
+  return "Plus ancien";
+};
+const GROUP_ORDER = ["Aujourd'hui", "Hier", "Cette semaine", "Plus ancien"];
+
 const I = ({ d, size = 20, color = "currentColor", sw = 1.8 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
 );
@@ -30,7 +43,6 @@ const ICal = (p) => <I d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-
 const INote = (p) => <I d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8" {...p} />;
 const IClose = (p) => <I d="M18 6L6 18 M6 6l12 12" {...p} />;
 
-// ─── Calendar grid ─────────────────────────────────────────────────
 const getCalDays = (year, month) => {
   const first = new Date(year, month, 1);
   const last = new Date(year, month + 1, 0);
@@ -42,7 +54,6 @@ const getCalDays = (year, month) => {
   return days;
 };
 
-// ─── Sheet ─────────────────────────────────────────────────────────
 const Sheet = ({ open, onClose, children }) => {
   if (!open) return null;
   return (
@@ -56,7 +67,6 @@ const Sheet = ({ open, onClose, children }) => {
   );
 };
 
-// ════════════════════════════════════════════════════════════════════
 export default function Home() {
   const { data: session, status } = useSession();
   const [appts, setAppts] = useState([]);
@@ -81,106 +91,67 @@ export default function Home() {
   const [remId, setRemId] = useState(null);
   const [rTxt, setRTxt] = useState("");
   const [rDel, setRDel] = useState(null);
+  const [notesTab, setNotesTab] = useState("voice"); // voice | reminder
 
   const userId = session?.user?.email || "unknown";
 
-  // ─── Supabase: Load manual appointments ─────────────────────────
   const loadManualAppts = useCallback(async () => {
-    if (!userId || userId === "unknown") return;
-    const { data, error } = await supabase
-      .from("appointments")
-      .select("*")
-      .eq("user_id", userId)
-      .order("date", { ascending: true });
-    if (!error && data) {
-      return data.map((a) => ({ ...a, source: "manual", manual: true }));
-    }
-    return [];
+    if (!userId || userId === "unknown") return [];
+    const { data } = await supabase.from("appointments").select("*").eq("user_id", userId).order("date", { ascending: true });
+    return data ? data.map((a) => ({ ...a, source: "manual", manual: true })) : [];
   }, [userId]);
 
-  // ─── Supabase: Load notes ───────────────────────────────────────
   const loadNotes = useCallback(async () => {
     if (!userId || userId === "unknown") return;
-    const { data, error } = await supabase
-      .from("notes")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
-    if (!error && data) setNotes(data);
+    const { data } = await supabase.from("notes").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+    if (data) setNotes(data);
   }, [userId]);
 
-  // ─── Fetch everything ───────────────────────────────────────────
   const fetchAll = useCallback(async () => {
     if (!session) return;
     setLoading(true);
     try {
-      // Load manual appointments from Supabase
       const manualAppts = await loadManualAppts() || [];
-
-      // Load Google Calendar events
       let googleAppts = [];
       if (session.accessToken) {
         try {
           const res = await fetch(`/api/calendar?token=${session.accessToken}`);
           const data = await res.json();
           if (data.appointments) googleAppts = data.appointments;
-        } catch (err) { console.error("Google Calendar error:", err); }
+        } catch (err) { console.error(err); }
       }
-
-      // Load notes from Supabase
       await loadNotes();
-
-      // Merge: Google events + manual, no duplicates
       const googleIds = new Set(googleAppts.map((a) => a.id));
       const uniqueManual = manualAppts.filter((a) => !googleIds.has(a.id));
-      const all = [...googleAppts, ...uniqueManual].sort((a, b) =>
-        `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`)
-      );
-      setAppts(all);
+      setAppts([...googleAppts, ...uniqueManual].sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`)));
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   }, [session, loadManualAppts, loadNotes]);
 
   useEffect(() => { if (session) fetchAll(); }, [session, fetchAll]);
 
-  // ─── Get notes for an appointment ───────────────────────────────
   const getApptNotes = (apptId) => notes.filter((n) => n.appointment_id === apptId);
 
-  // ─── Add appointment (Supabase) ─────────────────────────────────
   const addAppt = async () => {
     if (!fN.trim()) return;
     const id = uid();
     const newAppt = { id, user_id: userId, name: fN.trim(), address: fA.trim(), date: fD, time: fT, done: false };
-
-    // Save to Supabase
     const { error } = await supabase.from("appointments").insert(newAppt);
-    if (error) { console.error("Insert error:", error); return; }
-
-    // Update local state
-    const fullAppt = { ...newAppt, source: "manual", manual: true };
-    setAppts((prev) => [...prev, fullAppt].sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`)));
-
-    // Navigate to that date
+    if (error) { console.error(error); return; }
+    setAppts((prev) => [...prev, { ...newAppt, source: "manual", manual: true }].sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`)));
     const [y, m, d] = fD.split("-").map(Number);
-    setSelDate(new Date(y, m - 1, d));
-    setCMonth(m - 1); setCYear(y);
-    setFN(""); setFA(""); setFT("09:00"); setFD(toKey(new Date()));
-    setShowForm(false);
+    setSelDate(new Date(y, m - 1, d)); setCMonth(m - 1); setCYear(y);
+    setFN(""); setFA(""); setFT("09:00"); setFD(toKey(new Date())); setShowForm(false);
   };
 
-  // ─── Toggle done (Supabase for manual, local for Google) ────────
   const toggleDone = async (id) => {
     const appt = appts.find((a) => a.id === id);
     if (!appt) return;
     const newDone = !appt.done;
-
-    if (appt.source === "manual") {
-      await supabase.from("appointments").update({ done: newDone }).eq("id", id);
-    }
+    if (appt.source === "manual") await supabase.from("appointments").update({ done: newDone }).eq("id", id);
     setAppts((prev) => prev.map((a) => a.id === id ? { ...a, done: newDone } : a));
   };
 
-  // ─── Delete appointment (Supabase) ──────────────────────────────
   const delAppt = async (id) => {
     await supabase.from("notes").delete().eq("appointment_id", id);
     await supabase.from("appointments").delete().eq("id", id);
@@ -189,60 +160,71 @@ export default function Home() {
     setView("home");
   };
 
-  // ─── Waze ───────────────────────────────────────────────────────
-  const openWaze = (addr) => {
-    if (!addr) return;
-    window.location.href = `https://waze.com/ul?q=${encodeURIComponent(addr)}&navigate=yes`;
+  const delNote = async (id) => {
+    await supabase.from("notes").delete().eq("id", id);
+    setNotes((prev) => prev.filter((n) => n.id !== id));
   };
 
-  // ─── Voice ──────────────────────────────────────────────────────
+  const openWaze = (addr) => { if (!addr) return; window.location.href = `https://waze.com/ul?q=${encodeURIComponent(addr)}&navigate=yes`; };
+
+  // ─── Voice (CONTINUOUS MODE + RESUME) ───────────────────────────
   const startVoice = (id) => { setVoiceId(id); setTrans(""); setRec(false); setShowVoice(true); };
+
   const startRec = () => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { setTrans("Non supporté."); return; }
     if (recRef.current) { try { recRef.current.stop(); } catch {} }
-    const r = new SR(); r.lang = "fr-FR"; r.continuous = false; r.interimResults = true; recRef.current = r;
-    let finalText = "";
-    r.onresult = (e) => { let t = ""; for (let i = 0; i < e.results.length; i++) { t += e.results[i][0].transcript; if (e.results[i].isFinal) finalText = t; } setTrans(t || finalText); };
-    r.onerror = () => setRec(false);
-    r.onend = () => { setRec(false); if (finalText) setTrans(finalText); };
-    r.start(); setRec(true);
+    const r = new SR();
+    r.lang = "fr-FR";
+    r.continuous = true;
+    r.interimResults = true;
+    recRef.current = r;
+    const prevText = trans ? trans + " " : "";
+    r.onresult = (e) => {
+      let current = "";
+      for (let i = 0; i < e.results.length; i++) {
+        current += e.results[i][0].transcript;
+      }
+      setTrans(prevText + current);
+    };
+    r.onerror = (e) => { console.log("Speech error:", e.error); setRec(false); };
+    r.onend = () => { setRec(false); };
+    r.start();
+    setRec(true);
   };
-  const stopRec = () => { if (recRef.current) { try { recRef.current.stop(); } catch {} } setRec(false); };
+
+  const stopRec = () => {
+    if (recRef.current) { try { recRef.current.stop(); } catch {} recRef.current = null; }
+    setRec(false);
+  };
+
   const saveVoice = async () => {
     if (!trans.trim() || !voiceId) return;
     const note = { id: uid(), appointment_id: voiceId, user_id: userId, type: "voice", text: trans.trim(), delay: null };
     const { error } = await supabase.from("notes").insert(note);
-    if (!error) {
-      setNotes((prev) => [{ ...note, created_at: new Date().toISOString() }, ...prev]);
-    }
+    if (!error) setNotes((prev) => [{ ...note, created_at: new Date().toISOString() }, ...prev]);
     closeVoice();
   };
-  const closeVoice = () => { if (recRef.current) { try { recRef.current.stop(); } catch {} } setShowVoice(false); setTrans(""); setVoiceId(null); setRec(false); };
 
-  // ─── Reminders ──────────────────────────────────────────────────
+  const closeVoice = () => {
+    if (recRef.current) { try { recRef.current.stop(); } catch {} recRef.current = null; }
+    setShowVoice(false); setTrans(""); setVoiceId(null); setRec(false);
+  };
+
   const openReminder = (id) => { setRemId(id); setRTxt(""); setRDel(null); setShowReminder(true); };
   const saveReminder = async () => {
     if (!rTxt.trim() || !rDel || !remId) return;
     const note = { id: uid(), appointment_id: remId, user_id: userId, type: "reminder", text: rTxt.trim(), delay: rDel };
     const { error } = await supabase.from("notes").insert(note);
-    if (!error) {
-      setNotes((prev) => [{ ...note, created_at: new Date().toISOString() }, ...prev]);
-    }
-    if ("Notification" in window) {
-      Notification.requestPermission().then((p) => {
-        if (p === "granted") setTimeout(() => new Notification("RoadCRM", { body: rTxt.trim() }), rDel * 60 * 1000);
-      });
-    }
+    if (!error) setNotes((prev) => [{ ...note, created_at: new Date().toISOString() }, ...prev]);
+    if ("Notification" in window) Notification.requestPermission().then((p) => { if (p === "granted") setTimeout(() => new Notification("RoadCRM", { body: rTxt.trim() }), rDel * 60 * 1000); });
     setShowReminder(false); setRTxt(""); setRDel(null); setRemId(null);
   };
 
-  // ─── Calendar ───────────────────────────────────────────────────
   const prevMonth = () => { if (cMonth === 0) { setCMonth(11); setCYear(cYear - 1); } else setCMonth(cMonth - 1); };
   const nextMonth = () => { if (cMonth === 11) { setCMonth(0); setCYear(cYear + 1); } else setCMonth(cMonth + 1); };
   const goToday = () => { const n = new Date(); setCMonth(n.getMonth()); setCYear(n.getFullYear()); setSelDate(n); };
 
-  // ─── Auth ───────────────────────────────────────────────────────
   if (status === "loading") return <div className="min-h-screen flex items-center justify-center bg-stone-100"><p className="text-stone-400 text-sm">Chargement...</p></div>;
   if (!session) return (
     <div className="min-h-screen flex items-center justify-center bg-stone-100 px-6">
@@ -258,7 +240,6 @@ export default function Home() {
     </div>
   );
 
-  // ─── Data ───────────────────────────────────────────────────────
   const today = new Date();
   const todayKey = toKey(today);
   const selKey = toKey(selDate);
@@ -270,29 +251,77 @@ export default function Home() {
   const selDateStr = selDate.toLocaleDateString("fr-BE", { weekday: "long", day: "numeric", month: "long" });
   const sel = appts.find((a) => a.id === selId);
   const selNotes = sel ? getApptNotes(sel.id) : [];
-  const allNotes = notes.map((n) => ({ ...n, apptName: appts.find((a) => a.id === n.appointment_id)?.name || "RDV supprimé" }));
+
+  // Notes grouped by type and date
+  const voiceNotes = notes.filter((n) => n.type === "voice").map((n) => ({ ...n, apptName: appts.find((a) => a.id === n.appointment_id)?.name || "RDV" }));
+  const reminderNotes = notes.filter((n) => n.type === "reminder").map((n) => ({ ...n, apptName: appts.find((a) => a.id === n.appointment_id)?.name || "RDV" }));
+
+  const groupByDate = (items) => {
+    const groups = {};
+    items.forEach((n) => {
+      const g = getDateGroup(n.created_at);
+      if (!groups[g]) groups[g] = [];
+      groups[g].push(n);
+    });
+    return GROUP_ORDER.filter((g) => groups[g]).map((g) => ({ label: g, items: groups[g] }));
+  };
 
   // ═══════════════════ NOTES VIEW ═════════════════════════════════
-  if (view === "notes") return (
-    <div className="min-h-screen bg-stone-100">
-      <div className="px-5 pt-4 pb-2"><button onClick={() => setView("home")} className="flex items-center gap-1.5 text-[13px] text-stone-500 font-medium"><IBack size={18} color="#6B6B6B" /> Retour</button></div>
-      <div className="px-5"><h1 className="text-xl font-bold tracking-tight mb-1">Notes & Rappels</h1><p className="text-[12px] text-stone-400 mb-4">{allNotes.length} élément{allNotes.length !== 1 ? "s" : ""}</p></div>
-      <div className="px-5 pb-20 flex flex-col gap-1.5">
-        {allNotes.length === 0 ? (
-          <div className="text-center py-12"><p className="text-[13px] text-stone-400">Aucune note pour l{"'"}instant.</p></div>
-        ) : allNotes.map((n) => (
-          <div key={n.id} className="bg-white border border-stone-200 rounded-xl p-3 shadow-sm">
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${n.type === "voice" ? "bg-orange-50 text-orange-600" : "bg-violet-50 text-violet-600"}`}>{n.type === "voice" ? "Vocal" : "Rappel"}</span>
-              <span className="text-[11px] text-stone-400 truncate">{n.apptName}</span>
-            </div>
-            <p className="text-[13px] text-stone-800 leading-relaxed">{n.text}</p>
-            <p className="text-[11px] text-stone-400 mt-1">{new Date(n.created_at).toLocaleDateString("fr-BE", { day: "numeric", month: "short" })} à {new Date(n.created_at).toLocaleTimeString("fr-BE", { hour: "2-digit", minute: "2-digit" })}{n.delay ? ` · rappel ${n.delay} min` : ""}</p>
+  if (view === "notes") {
+    const activeNotes = notesTab === "voice" ? voiceNotes : reminderNotes;
+    const grouped = groupByDate(activeNotes);
+    return (
+      <div className="min-h-screen bg-stone-100">
+        <div className="px-5 pt-4 pb-2"><button onClick={() => setView("home")} className="flex items-center gap-1.5 text-[13px] text-stone-500 font-medium"><IBack size={18} color="#6B6B6B" /> Retour</button></div>
+        <div className="px-5 mb-3">
+          <h1 className="text-xl font-bold tracking-tight mb-3">Notes & Rappels</h1>
+          {/* Tabs */}
+          <div className="flex bg-white rounded-xl border border-stone-200 p-1 shadow-sm">
+            <button onClick={() => setNotesTab("voice")}
+              className={`flex-1 py-2 rounded-lg text-[13px] font-semibold transition-all ${notesTab === "voice" ? "bg-stone-900 text-white" : "text-stone-500"}`}>
+              🎤 Vocales ({voiceNotes.length})
+            </button>
+            <button onClick={() => setNotesTab("reminder")}
+              className={`flex-1 py-2 rounded-lg text-[13px] font-semibold transition-all ${notesTab === "reminder" ? "bg-stone-900 text-white" : "text-stone-500"}`}>
+              🔔 Rappels ({reminderNotes.length})
+            </button>
           </div>
-        ))}
+        </div>
+
+        <div className="px-5 pb-20">
+          {grouped.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-[13px] text-stone-400">{notesTab === "voice" ? "Aucune note vocale." : "Aucun rappel."}</p>
+              <p className="text-[12px] text-stone-400 mt-1">Crée-en depuis un rendez-vous.</p>
+            </div>
+          ) : grouped.map((group) => (
+            <div key={group.label} className="mb-4">
+              <h3 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-2">{group.label}</h3>
+              <div className="flex flex-col gap-1.5">
+                {group.items.map((n) => (
+                  <div key={n.id} className="bg-white border border-stone-200 rounded-xl p-3 shadow-sm">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] text-stone-400 font-medium mb-1">{n.apptName}</p>
+                        <p className="text-[13px] text-stone-800 leading-relaxed">{n.text}</p>
+                        <p className="text-[11px] text-stone-400 mt-1.5">
+                          {new Date(n.created_at).toLocaleTimeString("fr-BE", { hour: "2-digit", minute: "2-digit" })}
+                          {n.delay ? ` · rappel ${n.delay} min` : ""}
+                        </p>
+                      </div>
+                      <button onClick={() => delNote(n.id)} className="p-1.5 rounded-lg active:bg-red-50 flex-shrink-0">
+                        <ITrash size={14} color="#9CA3AF" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   // ═══════════════════ DETAIL VIEW ════════════════════════════════
   if (view === "detail" && sel) return (
@@ -329,31 +358,50 @@ export default function Home() {
             <h3 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-2">Notes sur ce RDV</h3>
             {selNotes.map((n) => (
               <div key={n.id} className="bg-white border border-stone-200 rounded-xl p-3 mb-1.5 shadow-sm">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${n.type === "voice" ? "bg-orange-50 text-orange-600" : "bg-violet-50 text-violet-600"}`}>{n.type === "voice" ? "Vocal" : "Rappel"}</span>
-                  <span className="text-[11px] text-stone-400">{new Date(n.created_at).toLocaleTimeString("fr-BE", { hour: "2-digit", minute: "2-digit" })}</span>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${n.type === "voice" ? "bg-orange-50 text-orange-600" : "bg-violet-50 text-violet-600"}`}>{n.type === "voice" ? "Vocal" : "Rappel"}</span>
+                      <span className="text-[11px] text-stone-400">{new Date(n.created_at).toLocaleTimeString("fr-BE", { hour: "2-digit", minute: "2-digit" })}</span>
+                    </div>
+                    <p className="text-[13px] text-stone-800 leading-relaxed">{n.text}</p>
+                  </div>
+                  <button onClick={() => delNote(n.id)} className="p-1.5 rounded-lg active:bg-red-50"><ITrash size={14} color="#9CA3AF" /></button>
                 </div>
-                <p className="text-[13px] text-stone-800 leading-relaxed">{n.text}</p>
               </div>
             ))}
           </div>
         )}
       </div>
 
+      {/* Voice modal - CONTINUOUS + RESUME */}
       {showVoice && (
         <div className="fixed inset-0 bg-white/97 backdrop-blur-xl z-50 flex flex-col items-center justify-center animate-fade-in">
           <button onClick={closeVoice} className="absolute top-5 right-5 w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center"><IClose size={20} color="#6B6B6B" /></button>
-          <div className="flex flex-col items-center gap-5 px-6">
-            <p className="text-[13px] font-semibold text-stone-500 uppercase tracking-wider">{rec ? "Écoute en cours..." : trans ? "Terminé" : "Note vocale"}</p>
-            <button onClick={rec ? stopRec : startRec} className={`w-24 h-24 rounded-full flex items-center justify-center transition-all ${rec ? "bg-red-100 border-[3px] border-red-500" : "bg-orange-50 border-[3px] border-orange-300"}`}>
+          <div className="flex flex-col items-center gap-4 px-6 w-full max-w-sm">
+            <p className="text-[13px] font-semibold text-stone-500 uppercase tracking-wider">
+              {rec ? "Écoute en cours..." : trans ? "En pause — appuie pour reprendre" : "Note vocale"}
+            </p>
+
+            <button onClick={rec ? stopRec : startRec}
+              className={`w-24 h-24 rounded-full flex items-center justify-center transition-all ${rec ? "bg-red-100 border-[3px] border-red-500" : "bg-orange-50 border-[3px] border-orange-300"}`}>
               {rec ? <IStop size={36} color="#DC2626" /> : <IMic size={36} color="#EA580C" />}
             </button>
-            <p className="text-[12px] text-stone-400">{rec ? "Appuie pour arrêter" : "Appuie pour dicter"}</p>
-            {trans && <div className="bg-stone-50 rounded-xl px-4 py-3 w-full max-w-[300px]"><p className="text-[14px] text-stone-800 leading-relaxed text-center">{trans}</p></div>}
+
+            <p className="text-[12px] text-stone-400">
+              {rec ? "Appuie pour mettre en pause" : trans ? "Appuie pour reprendre la dictée" : "Appuie pour commencer"}
+            </p>
+
+            {trans && (
+              <div className="bg-stone-50 rounded-xl px-4 py-3 w-full">
+                <p className="text-[14px] text-stone-800 leading-relaxed">{trans}</p>
+              </div>
+            )}
+
             {trans && !rec && (
-              <div className="flex gap-3">
-                <button onClick={() => setTrans("")} className="px-5 py-2.5 rounded-xl bg-stone-100 text-[13px] font-semibold text-stone-600">Refaire</button>
-                <button onClick={saveVoice} className="px-5 py-2.5 rounded-xl bg-stone-900 text-[13px] font-semibold text-white">Enregistrer</button>
+              <div className="flex gap-3 w-full">
+                <button onClick={() => setTrans("")} className="flex-1 py-2.5 rounded-xl bg-stone-100 text-[13px] font-semibold text-stone-600">Effacer</button>
+                <button onClick={saveVoice} className="flex-1 py-2.5 rounded-xl bg-stone-900 text-[13px] font-semibold text-white">Enregistrer</button>
               </div>
             )}
           </div>
