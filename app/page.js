@@ -43,6 +43,7 @@ const ICal = (p) => <I d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-
 const INote = (p) => <I d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8" {...p} />;
 const IClose = (p) => <I d="M18 6L6 18 M6 6l12 12" {...p} />;
 const ISearch = (p) => <I d="M11 3a8 8 0 1 0 0 16 8 8 0 0 0 0-16z M21 21l-4.35-4.35" {...p} />;
+const ISettings = (p) => <I d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" {...p} />;
 
 const getCalDays = (year, month) => {
   const first = new Date(year, month, 1);
@@ -286,6 +287,87 @@ export default function Home() {
     return GROUP_ORDER.filter((g) => groups[g]).map((g) => ({ label: g, items: groups[g] }));
   };
 
+  // ═══════════════════ SETTINGS VIEW ════════════════════════════════
+  if (view === "settings") return (
+    <div className="min-h-screen bg-stone-100">
+      <div className="px-5 pt-4 pb-2"><button onClick={() => setView("home")} className="flex items-center gap-1.5 text-[13px] text-stone-500 font-medium"><IBack size={18} color="#6B6B6B" /> Retour</button></div>
+      <div className="px-5">
+        <h1 className="text-xl font-bold tracking-tight mb-1">Réglages</h1>
+        <p className="text-[12px] text-stone-400 mb-4">{session?.user?.email}</p>
+      </div>
+      <div className="px-5 pb-20">
+        {/* Account */}
+        <h3 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-2">Compte</h3>
+        <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden divide-y divide-stone-100 mb-5 shadow-sm">
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[13px] font-bold text-blue-600">{session?.user?.name?.charAt(0) || "?"}</div>
+            <div className="flex-1">
+              <p className="text-[13px] font-medium text-stone-800">{session?.user?.name || "Utilisateur"}</p>
+              <p className="text-[11px] text-stone-400">{session?.user?.email}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Notifications */}
+        <h3 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-2">Notifications</h3>
+        <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden divide-y divide-stone-100 mb-5 shadow-sm">
+          <button onClick={() => {
+            if ("Notification" in window) {
+              Notification.requestPermission().then((p) => {
+                if (p === "granted") alert("Notifications activées !");
+                else if (p === "denied") alert("Notifications bloquées. Vas dans les réglages de Safari pour les activer.");
+                else alert("Notifications en attente.");
+              });
+            } else { alert("Les notifications ne sont pas supportées sur ce navigateur."); }
+          }} className="w-full flex items-center gap-3 px-4 py-3 text-left text-[13px] font-medium text-stone-800 active:bg-stone-50">
+            <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center"><IBell size={16} color="#7C3AED" /></div>
+            Activer les notifications
+            <span className="ml-auto"><IChev /></span>
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <h3 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-2">Navigation</h3>
+        <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden divide-y divide-stone-100 mb-5 shadow-sm">
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center"><INav size={16} color="#2563EB" /></div>
+            <div className="flex-1">
+              <p className="text-[13px] font-medium text-stone-800">Application GPS</p>
+              <p className="text-[11px] text-stone-400">Waze</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Data */}
+        <h3 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-2">Données</h3>
+        <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden divide-y divide-stone-100 mb-5 shadow-sm">
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center"><ICheck size={16} color="#16A34A" /></div>
+            <div className="flex-1">
+              <p className="text-[13px] font-medium text-stone-800">Google Calendar</p>
+              <p className="text-[11px] text-stone-400">Connecté · Synchro bidirectionnelle</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center"><ICheck size={16} color="#16A34A" /></div>
+            <div className="flex-1">
+              <p className="text-[13px] font-medium text-stone-800">Supabase Cloud</p>
+              <p className="text-[11px] text-stone-400">Connecté · {appts.filter((a) => a.source === "manual").length} RDV · {notes.length} notes</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Logout */}
+        <button onClick={() => { if (window.confirm("Se déconnecter ?")) signOut(); }}
+          className="w-full flex items-center justify-center gap-2 py-3 text-[13px] font-medium text-red-600 bg-white border border-stone-200 rounded-2xl shadow-sm active:bg-red-50">
+          <ILogout size={16} color="#DC2626" /> Se déconnecter
+        </button>
+
+        <p className="text-[10px] text-stone-300 text-center mt-6">RoadCRM v1.0</p>
+      </div>
+    </div>
+  );
+
   // ═══════════════════ SEARCH VIEW ══════════════════════════════════
   const searchResults = searchQuery.trim().length >= 2 ? appts.filter((a) => {
     const q = searchQuery.toLowerCase();
@@ -306,7 +388,7 @@ export default function Home() {
               onChange={(e) => setSearchQuery(e.target.value)}
               autoFocus
             />
-            <ISearch size={16} color="#9CA3AF" style={{ position: "absolute", left: 10, top: 11 }} />
+            <div className="absolute left-2.5 top-2.5 pointer-events-none"><ISearch size={16} color="#9CA3AF" /></div>
           </div>
         </div>
       </div>
@@ -521,7 +603,7 @@ export default function Home() {
             {notes.length > 0 && <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-blue-600" />}
           </button>
           <button onClick={fetchAll} className={`p-2 rounded-lg active:bg-stone-200 ${loading ? "animate-spin" : ""}`}><IRefresh size={16} color="#9CA3AF" /></button>
-          <button onClick={() => { if (window.confirm("Se déconnecter ?")) signOut(); }} className="p-2 rounded-lg active:bg-stone-200"><ILogout size={16} color="#9CA3AF" /></button>
+          <button onClick={() => setView("settings")} className="p-2 rounded-lg active:bg-stone-200"><ISettings size={16} color="#9CA3AF" /></button>
         </div>
       </div>
 
@@ -570,11 +652,14 @@ export default function Home() {
           const aNotes = getApptNotes(a.id);
           return (
             <div key={a.id} onClick={() => { setSelId(a.id); setView("detail"); }}
-              className={`bg-white border border-stone-200 rounded-2xl px-4 py-3 active:bg-stone-50 shadow-sm ${a.done ? "opacity-40" : ""}`}>
+              className={`bg-white border rounded-2xl px-4 py-3 active:bg-stone-50 shadow-sm ${a.done ? "border-green-200 bg-green-50/30" : "border-stone-200"}`}>
               <div className="flex justify-between items-start">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[14px] font-semibold leading-snug">{a.name}</p>
-                  <p className="text-[12px] text-stone-500 mt-0.5 truncate">{a.address || "Pas d'adresse"}</p>
+                <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                  {a.done && <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 mt-0.5"><ICheck size={12} color="#fff" sw={2.5} /></div>}
+                  <div className="min-w-0 flex-1">
+                    <p className={`text-[14px] font-semibold leading-snug ${a.done ? "line-through text-stone-400" : ""}`}>{a.name}</p>
+                    <p className={`text-[12px] mt-0.5 truncate ${a.done ? "text-stone-400" : "text-stone-500"}`}>{a.address || "Pas d'adresse"}</p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 ml-3 flex-shrink-0">
                   <span className="font-mono text-[12px] text-stone-500 font-medium">{a.time}</span>
