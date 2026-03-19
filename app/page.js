@@ -369,10 +369,30 @@ export default function Home() {
   );
 
   // ═══════════════════ SEARCH VIEW ══════════════════════════════════
+  // Fuzzy search: ignore accents, apostrophes, hyphens, tolerate typos
+  const normalize = (s) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[''`\-_.,:;]/g, "").replace(/\s+/g, " ").trim();
+  const fuzzyMatch = (text, query) => {
+    const t = normalize(text);
+    const q = normalize(query);
+    if (t.includes(q)) return true;
+    // Check each word of query
+    const words = q.split(" ").filter(Boolean);
+    if (words.every((w) => t.includes(w))) return true;
+    // Tolerate 1 char difference per word (simple fuzzy)
+    return words.some((w) => {
+      if (w.length < 3) return t.includes(w);
+      for (let i = 0; i < t.length - w.length + 1; i++) {
+        const chunk = t.substring(i, i + w.length);
+        let diff = 0;
+        for (let j = 0; j < w.length; j++) { if (chunk[j] !== w[j]) diff++; }
+        if (diff <= 1) return true;
+      }
+      return false;
+    });
+  };
   const searchResults = searchQuery.trim().length >= 2 ? appts.filter((a) => {
-    const q = searchQuery.toLowerCase();
     const aNotes = getApptNotes(a.id);
-    return a.name.toLowerCase().includes(q) || (a.address && a.address.toLowerCase().includes(q)) || aNotes.some((n) => n.text.toLowerCase().includes(q));
+    return fuzzyMatch(a.name, searchQuery) || (a.address && fuzzyMatch(a.address, searchQuery)) || aNotes.some((n) => fuzzyMatch(n.text, searchQuery));
   }) : [];
 
   if (view === "search") return (
