@@ -2,6 +2,7 @@
 
 let notified = new Set();
 let timers = [];
+let notifDelay = 15; // default 15 min
 
 function clearTimers() {
   timers.forEach((t) => clearTimeout(t));
@@ -19,7 +20,7 @@ function scheduleNotifications(appointments, reminders) {
     if (notified.has(key)) return;
 
     const apptTime = new Date(a.date + "T" + a.time).getTime();
-    const fireAt = apptTime - 15 * 60000; // 15 min avant
+    const fireAt = apptTime - notifDelay * 60000;
     const delay = fireAt - now;
 
     if (delay > 0) {
@@ -36,7 +37,7 @@ function scheduleNotifications(appointments, reminders) {
         });
       }, delay);
       timers.push(t);
-    } else if (delay > -15 * 60000 && !notified.has(key)) {
+    } else if (delay > -notifDelay * 60000 && !notified.has(key)) {
       // RDV is within the next 15 min already — notify now
       notified.add(key);
       const mins = Math.max(1, Math.round((apptTime - now) / 60000));
@@ -89,6 +90,7 @@ function scheduleNotifications(appointments, reminders) {
 // Receive data from main app
 self.addEventListener("message", (e) => {
   if (e.data.type === "SYNC_APPTS") {
+    if (e.data.delay) notifDelay = e.data.delay;
     scheduleNotifications(e.data.appointments, null);
   }
   if (e.data.type === "SYNC_REMINDERS") {

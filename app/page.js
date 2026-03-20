@@ -155,7 +155,12 @@ export default function Home() {
   const [showUnsaved, setShowUnsaved] = useState(false);
   const [savedNav, setSavedNav] = useState(() => { if (typeof window === "undefined") return "waze"; return localStorage.getItem("roadcrm-nav") || "waze"; });
   const [savedAvatar, setSavedAvatar] = useState(() => { if (typeof window === "undefined") return 0; return parseInt(localStorage.getItem("roadcrm-avatar") || "0"); });
-  const settingsDirty = navApp !== savedNav || avatar !== savedAvatar;
+  const [notifEnabled, setNotifEnabled] = useState(() => { if (typeof window === "undefined") return false; return localStorage.getItem("roadcrm-notif") !== "off"; });
+  const [notifDelay, setNotifDelay] = useState(() => { if (typeof window === "undefined") return 15; return parseInt(localStorage.getItem("roadcrm-notif-delay") || "15"); });
+  const [notifPerm, setNotifPerm] = useState("default");
+  const [savedNotifEnabled, setSavedNotifEnabled] = useState(() => { if (typeof window === "undefined") return false; return localStorage.getItem("roadcrm-notif") !== "off"; });
+  const [savedNotifDelay, setSavedNotifDelay] = useState(() => { if (typeof window === "undefined") return 15; return parseInt(localStorage.getItem("roadcrm-notif-delay") || "15"); });
+  const settingsDirty = navApp !== savedNav || avatar !== savedAvatar || notifEnabled !== savedNotifEnabled || notifDelay !== savedNotifDelay;
 
   const userId = session?.user?.email || "unknown";
 
@@ -205,6 +210,8 @@ export default function Home() {
         }
       });
     }
+    // Check notification permission
+    if ("Notification" in window) setNotifPerm(Notification.permission);
     // Handle ?appt= URL param (when app was closed)
     const params = new URLSearchParams(window.location.search);
     const apptParam = params.get("appt");
@@ -219,15 +226,16 @@ export default function Home() {
     if (!navigator.serviceWorker?.controller) return;
     navigator.serviceWorker.controller.postMessage({
       type: "SYNC_APPTS",
-      appointments: appts.map((a) => ({ id: a.id, name: a.name, address: a.address, date: a.date, time: a.time, done: a.done })),
+      appointments: notifEnabled ? appts.map((a) => ({ id: a.id, name: a.name, address: a.address, date: a.date, time: a.time, done: a.done })) : [],
+      delay: notifDelay,
     });
-  }, [appts]);
+  }, [appts, notifEnabled, notifDelay]);
 
   useEffect(() => {
     if (!navigator.serviceWorker?.controller) return;
-    const reminders = notes.filter((n) => n.type === "reminder");
+    const reminders = notifEnabled ? notes.filter((n) => n.type === "reminder") : [];
     navigator.serviceWorker.controller.postMessage({ type: "SYNC_REMINDERS", reminders });
-  }, [notes]);
+  }, [notes, notifEnabled]);
 
   const getApptNotes = (apptId) => notes.filter((n) => n.appointment_id === apptId);
 
@@ -405,9 +413,9 @@ export default function Home() {
             <p className="text-[15px] font-semibold text-stone-800 mb-1">Modifications non sauvegardées</p>
             <p className="text-[13px] text-stone-500 mb-5">Voulez-vous sauvegarder vos changements ?</p>
             <div className="flex gap-2">
-              <button onClick={() => { setNavApp(savedNav); setAvatar(savedAvatar); setShowUnsaved(false); setView("home"); }}
+              <button onClick={() => { setNavApp(savedNav); setAvatar(savedAvatar); setNotifEnabled(savedNotifEnabled); setNotifDelay(savedNotifDelay); setShowUnsaved(false); setView("home"); }}
                 className="flex-1 py-2.5 text-[13px] font-medium text-stone-600 bg-stone-100 rounded-xl active:bg-stone-200">Annuler</button>
-              <button onClick={() => { localStorage.setItem("roadcrm-nav", navApp); localStorage.setItem("roadcrm-avatar", String(avatar)); setSavedNav(navApp); setSavedAvatar(avatar); setShowUnsaved(false); setSaved(true); setTimeout(() => { setSaved(false); setView("home"); }, 800); }}
+              <button onClick={() => { localStorage.setItem("roadcrm-nav", navApp); localStorage.setItem("roadcrm-avatar", String(avatar)); localStorage.setItem("roadcrm-notif", notifEnabled ? "on" : "off"); localStorage.setItem("roadcrm-notif-delay", String(notifDelay)); setSavedNav(navApp); setSavedAvatar(avatar); setSavedNotifEnabled(notifEnabled); setSavedNotifDelay(notifDelay); setShowUnsaved(false); setSaved(true); setTimeout(() => { setSaved(false); setView("home"); }, 800); }}
                 className="flex-1 py-2.5 text-[13px] font-semibold text-white bg-blue-600 rounded-xl active:bg-blue-700">Sauvegarder</button>
             </div>
           </div>
@@ -448,27 +456,40 @@ export default function Home() {
         {/* Notifications */}
         <h3 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-2">Notifications</h3>
         <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden divide-y divide-stone-100 mb-5 shadow-sm">
-          <button onClick={() => {
-            if ("Notification" in window) {
-              Notification.requestPermission().then((p) => {
-                if (p === "granted") {
-                  alert("Notifications activées ! Tu recevras une alerte 15 min avant chaque RDV.");
-                  if (navigator.serviceWorker?.controller) {
-                    navigator.serviceWorker.controller.postMessage({ type: "CLEAR_NOTIFIED" });
-                  }
-                }
-                else if (p === "denied") alert("Notifications bloquées. Va dans les réglages de ton navigateur pour les activer.");
-                else alert("Notifications en attente.");
-              });
-            } else { alert("Les notifications ne sont pas supportées sur ce navigateur."); }
-          }} className="w-full flex items-center gap-3 px-4 py-3 text-left text-[13px] font-medium text-stone-800 active:bg-stone-50">
+          {/* Toggle on/off */}
+          <div className="w-full flex items-center gap-3 px-4 py-3">
             <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center"><IBell size={16} color="#7C3AED" /></div>
             <div className="flex-1">
-              <p className="text-[13px] font-medium text-stone-800">Activer les notifications</p>
-              <p className="text-[11px] text-stone-400">Alerte 15 min avant chaque RDV</p>
+              <p className="text-[13px] font-medium text-stone-800">Notifications RDV</p>
+              <p className="text-[11px] text-stone-400">{notifPerm === "denied" ? "Bloquées par le navigateur" : notifEnabled ? "Activées" : "Désactivées"}</p>
             </div>
-            <span className="ml-auto"><IChev /></span>
-          </button>
+            <button onClick={() => {
+              if (notifPerm === "denied") { alert("Les notifications sont bloquées. Va dans les réglages de ton navigateur pour les réactiver."); return; }
+              if (notifPerm !== "granted") {
+                Notification.requestPermission().then((p) => {
+                  setNotifPerm(p);
+                  if (p === "granted") setNotifEnabled(true);
+                });
+              } else { setNotifEnabled(!notifEnabled); }
+            }}
+              className={`w-11 h-6 rounded-full transition-colors relative ${notifEnabled && notifPerm === "granted" ? "bg-blue-600" : "bg-stone-300"}`}>
+              <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${notifEnabled && notifPerm === "granted" ? "translate-x-5" : "translate-x-0.5"}`} />
+            </button>
+          </div>
+          {/* Delay picker */}
+          {notifEnabled && notifPerm === "granted" && (
+            <div className="px-4 py-3">
+              <p className="text-[11px] text-stone-400 mb-2">Me prévenir avant chaque RDV</p>
+              <div className="flex flex-wrap gap-2">
+                {[5, 10, 15, 30, 60].map((m) => (
+                  <button key={m} onClick={() => setNotifDelay(m)}
+                    className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all ${notifDelay === m ? "bg-blue-600 text-white" : "bg-stone-100 text-stone-600 active:bg-stone-200"}`}>
+                    {m < 60 ? m + " min" : "1h"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Navigation picker */}
@@ -503,8 +524,12 @@ export default function Home() {
         <button onClick={() => {
           localStorage.setItem("roadcrm-avatar", String(avatar));
           localStorage.setItem("roadcrm-nav", navApp);
+          localStorage.setItem("roadcrm-notif", notifEnabled ? "on" : "off");
+          localStorage.setItem("roadcrm-notif-delay", String(notifDelay));
           setSavedNav(navApp);
           setSavedAvatar(avatar);
+          setSavedNotifEnabled(notifEnabled);
+          setSavedNotifDelay(notifDelay);
           setSaved(true);
           setTimeout(() => setSaved(false), 2000);
         }}
