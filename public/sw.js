@@ -110,15 +110,18 @@ self.addEventListener("install", (e) => {
   e.waitUntil(self.skipWaiting());
 });
 
-// Handle notification click — open or focus the app
+// Handle notification click — open app and navigate to appointment
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
+  const apptId = e.notification.data?.id;
   e.waitUntil(
     self.clients.matchAll({ type: "window" }).then((clients) => {
       if (clients.length > 0) {
-        return clients[0].focus();
+        const client = clients[0];
+        if (apptId) client.postMessage({ type: "OPEN_APPT", id: apptId });
+        return client.focus();
       }
-      return self.clients.openWindow("/");
+      return self.clients.openWindow("/?appt=" + (apptId || ""));
     })
   );
 });

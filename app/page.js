@@ -194,10 +194,24 @@ export default function Home() {
 
   useEffect(() => { if (session) fetchAll(); }, [session, fetchAll]);
 
-  // Register service worker & sync appointments/reminders
+  // Register service worker & listen for notification clicks
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
+      navigator.serviceWorker.addEventListener("message", (e) => {
+        if (e.data?.type === "OPEN_APPT" && e.data.id) {
+          setSelId(e.data.id);
+          setView("detail");
+        }
+      });
+    }
+    // Handle ?appt= URL param (when app was closed)
+    const params = new URLSearchParams(window.location.search);
+    const apptParam = params.get("appt");
+    if (apptParam) {
+      setSelId(apptParam);
+      setView("detail");
+      window.history.replaceState({}, "", "/");
     }
   }, []);
 
