@@ -358,7 +358,7 @@ export default function Home() {
   // ═══════════════════ AVATARS ═══════════════════════════════════════
   const avatarCount = 6;
   const AvatarImg = ({ index, size = 40 }) => (
-    <img src={`/avatar-${index + 1}.png`} alt={`Avatar ${index + 1}`} width={size} height={size} className="object-contain" />
+    <img src={`/avatar-${index + 1}.png`} alt={`Avatar ${index + 1}`} width={size} height={size} className="object-contain" style={{ clipPath: "circle(48% at 50% 48%)" }} />
   );
 
   // ═══════════════════ SETTINGS VIEW ════════════════════════════════
@@ -728,7 +728,15 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-stone-100 animate-view-in">
       <div className="px-5 pt-5 pb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2.5"><div className="w-2.5 h-2.5 rounded-full bg-blue-600" /><h1 className="text-[17px] font-bold tracking-tight">RoadCRM</h1></div>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setView("settings")} className="active:scale-95 transition-transform">
+            <AvatarImg index={avatar} size={36} />
+          </button>
+          <div>
+            <h1 className="text-[17px] font-bold tracking-tight leading-tight">RoadCRM</h1>
+            <p className="text-[11px] text-stone-400 leading-tight">{session?.user?.name || "Mon compte"}</p>
+          </div>
+        </div>
         <button onClick={fetchAll} className={`p-2 rounded-lg active:bg-stone-200 ${loading ? "animate-spin" : ""}`}><IRefresh size={16} color="#9CA3AF" /></button>
       </div>
 
