@@ -358,7 +358,7 @@ export default function Home() {
   // ═══════════════════ AVATARS ═══════════════════════════════════════
   const avatarCount = 6;
   const AvatarImg = ({ index, size = 40 }) => (
-    <img src={`/avatar-${index + 1}.png`} alt={`Avatar ${index + 1}`} width={size} height={size} className="rounded-full object-cover" />
+    <img src={`/avatar-${index + 1}.png`} alt={`Avatar ${index + 1}`} width={size} height={size} className="object-contain" />
   );
 
   // ═══════════════════ SETTINGS VIEW ════════════════════════════════
