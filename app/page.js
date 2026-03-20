@@ -151,19 +151,11 @@ export default function Home() {
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [avatar, setAvatar] = useState(() => { if (typeof window === "undefined") return 0; return parseInt(localStorage.getItem("roadcrm-avatar") || "0"); });
   const [navApp, setNavApp] = useState(() => { if (typeof window === "undefined") return "waze"; return localStorage.getItem("roadcrm-nav") || "waze"; });
-  const [saved, setSaved] = useState(false);
-  const [showUnsaved, setShowUnsaved] = useState(false);
-  const [savedNav, setSavedNav] = useState(() => { if (typeof window === "undefined") return "waze"; return localStorage.getItem("roadcrm-nav") || "waze"; });
-  const [savedAvatar, setSavedAvatar] = useState(() => { if (typeof window === "undefined") return 0; return parseInt(localStorage.getItem("roadcrm-avatar") || "0"); });
   const [notifEnabled, setNotifEnabled] = useState(() => { if (typeof window === "undefined") return false; return localStorage.getItem("roadcrm-notif") !== "off"; });
   const [notifDelay, setNotifDelay] = useState(() => { if (typeof window === "undefined") return 15; return parseInt(localStorage.getItem("roadcrm-notif-delay") || "15"); });
   const [remNotifEnabled, setRemNotifEnabled] = useState(() => { if (typeof window === "undefined") return true; return localStorage.getItem("roadcrm-notif-rem") !== "off"; });
   const [notifPerm, setNotifPerm] = useState("default");
-  const [savedNotifEnabled, setSavedNotifEnabled] = useState(() => { if (typeof window === "undefined") return false; return localStorage.getItem("roadcrm-notif") !== "off"; });
-  const [savedNotifDelay, setSavedNotifDelay] = useState(() => { if (typeof window === "undefined") return 15; return parseInt(localStorage.getItem("roadcrm-notif-delay") || "15"); });
-  const [savedRemNotifEnabled, setSavedRemNotifEnabled] = useState(() => { if (typeof window === "undefined") return true; return localStorage.getItem("roadcrm-notif-rem") !== "off"; });
   const [openSection, setOpenSection] = useState(null);
-  const settingsDirty = navApp !== savedNav || avatar !== savedAvatar || notifEnabled !== savedNotifEnabled || notifDelay !== savedNotifDelay || remNotifEnabled !== savedRemNotifEnabled;
 
   const userId = session?.user?.email || "unknown";
 
@@ -407,32 +399,75 @@ export default function Home() {
     <img src={`/avatar-${index + 1}.png`} alt={`Avatar ${index + 1}`} width={size} height={size} className="object-contain" />
   );
 
+  const autoSave = (key, val) => { localStorage.setItem(key, val); };
+  const navNames = { waze: "Waze", google: "Google Maps", apple: "Apple Plans" };
+  const toggleNotif = () => {
+    if (notifPerm === "denied") { alert("Les notifications sont bloquées. Va dans les réglages de ton navigateur pour les réactiver."); return; }
+    if (notifPerm !== "granted") {
+      Notification.requestPermission().then((p) => { setNotifPerm(p); if (p === "granted") { setNotifEnabled(true); autoSave("roadcrm-notif", "on"); } });
+    } else { const v = !notifEnabled; setNotifEnabled(v); autoSave("roadcrm-notif", v ? "on" : "off"); }
+  };
+  const toggleRemNotif = () => {
+    if (notifPerm === "denied") { alert("Les notifications sont bloquées. Va dans les réglages de ton navigateur pour les réactiver."); return; }
+    if (notifPerm !== "granted") {
+      Notification.requestPermission().then((p) => { setNotifPerm(p); if (p === "granted") { setRemNotifEnabled(true); autoSave("roadcrm-notif-rem", "on"); } });
+    } else { const v = !remNotifEnabled; setRemNotifEnabled(v); autoSave("roadcrm-notif-rem", v ? "on" : "off"); }
+  };
+  const Toggle = ({ on }) => (
+    <div className={`w-[46px] h-[26px] rounded-full transition-colors relative flex-shrink-0 ${on ? "bg-blue-600" : "bg-stone-300"}`}>
+      <div className={`absolute top-[3px] w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${on ? "translate-x-[22px]" : "translate-x-[3px]"}`} />
+    </div>
+  );
+
   // ═══════════════════ SETTINGS VIEW ════════════════════════════════
   if (view === "settings") return (
     <div className="min-h-screen bg-stone-100">
-      {showUnsaved && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl p-5 mx-8 w-full max-w-xs shadow-xl">
-            <p className="text-[15px] font-semibold text-stone-800 mb-1">Modifications non sauvegardées</p>
-            <p className="text-[13px] text-stone-500 mb-5">Voulez-vous sauvegarder vos changements ?</p>
-            <div className="flex gap-2">
-              <button onClick={() => { setNavApp(savedNav); setAvatar(savedAvatar); setNotifEnabled(savedNotifEnabled); setNotifDelay(savedNotifDelay); setRemNotifEnabled(savedRemNotifEnabled); setShowUnsaved(false); setView("home"); }}
-                className="flex-1 py-2.5 text-[13px] font-medium text-stone-600 bg-stone-100 rounded-xl active:bg-stone-200">Annuler</button>
-              <button onClick={() => { localStorage.setItem("roadcrm-nav", navApp); localStorage.setItem("roadcrm-avatar", String(avatar)); localStorage.setItem("roadcrm-notif", notifEnabled ? "on" : "off"); localStorage.setItem("roadcrm-notif-delay", String(notifDelay)); localStorage.setItem("roadcrm-notif-rem", remNotifEnabled ? "on" : "off"); setSavedNav(navApp); setSavedAvatar(avatar); setSavedNotifEnabled(notifEnabled); setSavedNotifDelay(notifDelay); setSavedRemNotifEnabled(remNotifEnabled); setShowUnsaved(false); setSaved(true); setTimeout(() => { setSaved(false); setView("home"); }, 800); }}
-                className="flex-1 py-2.5 text-[13px] font-semibold text-white bg-blue-600 rounded-xl active:bg-blue-700">Sauvegarder</button>
+      {/* Nav picker sheet */}
+      {openSection === "nav" && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setOpenSection(null)}>
+          <div className="bg-white rounded-t-2xl w-full max-w-md pb-8 pt-3 px-5 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-stone-300 rounded-full mx-auto mb-4" />
+            <p className="text-[15px] font-semibold text-stone-800 mb-3">Application de navigation</p>
+            {[
+              { id: "waze", name: "Waze", logo: <img src="/waze-logo.png" alt="Waze" width={28} height={28} className="object-contain" /> },
+              { id: "google", name: "Google Maps", logo: <img src="/google-maps-logo.png" alt="Google Maps" width={28} height={28} className="object-contain" /> },
+              { id: "apple", name: "Apple Plans", logo: <img src="/apple-maps-logo.png" alt="Apple Plans" width={28} height={28} className="object-contain" /> },
+            ].map((app) => (
+              <button key={app.id} onClick={() => { setNavApp(app.id); autoSave("roadcrm-nav", app.id); setOpenSection(null); }}
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1 active:bg-stone-50 ${navApp === app.id ? "bg-blue-50" : ""}`}>
+                <div className="w-9 h-9 flex items-center justify-center">{app.logo}</div>
+                <p className="text-[14px] font-medium text-stone-800 flex-1">{app.name}</p>
+                {navApp === app.id && <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center"><ICheck size={12} color="#fff" sw={2.5} /></div>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* Delay picker sheet */}
+      {openSection === "delay" && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setOpenSection(null)}>
+          <div className="bg-white rounded-t-2xl w-full max-w-md pb-8 pt-3 px-5 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-stone-300 rounded-full mx-auto mb-4" />
+            <p className="text-[15px] font-semibold text-stone-800 mb-3">Prévenir avant chaque RDV</p>
+            <div className="flex flex-wrap gap-2">
+              {[5, 10, 15, 30, 60].map((m) => (
+                <button key={m} onClick={() => { setNotifDelay(m); autoSave("roadcrm-notif-delay", String(m)); setOpenSection(null); }}
+                  className={`px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all ${notifDelay === m ? "bg-blue-600 text-white" : "bg-stone-100 text-stone-600 active:bg-stone-200"}`}>
+                  {m < 60 ? m + " min" : "1h"}
+                </button>
+              ))}
             </div>
           </div>
         </div>
       )}
-      <div className="px-5 pt-4 pb-2"><button onClick={() => { if (settingsDirty) { setShowUnsaved(true); } else { setView("home"); } }} className="flex items-center gap-1.5 text-[13px] text-stone-500 font-medium"><IBack size={18} color="#6B6B6B" /> Retour</button></div>
+      <div className="px-5 pt-4 pb-2"><button onClick={() => setView("home")} className="flex items-center gap-1.5 text-[13px] text-stone-500 font-medium"><IBack size={18} color="#6B6B6B" /> Retour</button></div>
       <div className="px-5">
         <h1 className="text-xl font-bold tracking-tight mb-1">Réglages</h1>
         <p className="text-[12px] text-stone-400 mb-4">{session?.user?.email}</p>
       </div>
       <div className="px-5 pb-20">
-        {/* Account + Avatar */}
-        <h3 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-2">Compte</h3>
-        <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden mb-5 shadow-sm">
+        {/* Compte */}
+        <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden mb-4 shadow-sm">
           <button onClick={() => setShowAvatarPicker(!showAvatarPicker)} className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-stone-50">
             <AvatarImg index={avatar} size={44} />
             <div className="flex-1">
@@ -443,10 +478,9 @@ export default function Home() {
           </button>
           {showAvatarPicker && (
             <div className="px-4 py-3 border-t border-stone-100">
-              <p className="text-[11px] text-stone-400 mb-2">Choisis ton avatar</p>
               <div className="flex flex-wrap gap-2">
                 {Array.from({ length: avatarCount }, (_, i) => (
-                  <button key={i} onClick={() => { setAvatar(i); setShowAvatarPicker(false); }}
+                  <button key={i} onClick={() => { setAvatar(i); autoSave("roadcrm-avatar", String(i)); setShowAvatarPicker(false); }}
                     className={`rounded-full p-0.5 transition-all ${avatar === i ? "ring-2 ring-blue-500 ring-offset-2" : ""}`}>
                     <AvatarImg index={i} size={40} />
                   </button>
@@ -456,123 +490,54 @@ export default function Home() {
           )}
         </div>
 
-        {/* Notifications — collapsible */}
-        <button onClick={() => setOpenSection(openSection === "notif" ? null : "notif")} className="w-full flex items-center justify-between mb-2">
-          <h3 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider">Notifications</h3>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${openSection === "notif" ? "rotate-180" : ""}`}><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        {openSection === "notif" && (
-          <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden divide-y divide-stone-100 mb-5 shadow-sm animate-fade-in">
-            {/* RDV notifications toggle */}
-            <div className="w-full flex items-center gap-3 px-4 py-3">
-              <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center"><IBell size={16} color="#7C3AED" /></div>
-              <div className="flex-1">
-                <p className="text-[13px] font-medium text-stone-800">Rendez-vous</p>
-                <p className="text-[11px] text-stone-400">{notifPerm === "denied" ? "Bloquées par le navigateur" : notifEnabled ? "Activées" : "Désactivées"}</p>
-              </div>
-              <button onClick={() => {
-                if (notifPerm === "denied") { alert("Les notifications sont bloquées. Va dans les réglages de ton navigateur pour les réactiver."); return; }
-                if (notifPerm !== "granted") {
-                  Notification.requestPermission().then((p) => { setNotifPerm(p); if (p === "granted") setNotifEnabled(true); });
-                } else { setNotifEnabled(!notifEnabled); }
-              }}
-                className={`w-[46px] h-[26px] rounded-full transition-colors relative flex-shrink-0 ${notifEnabled && notifPerm === "granted" ? "bg-blue-600" : "bg-stone-300"}`}>
-                <div className={`absolute top-[3px] w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${notifEnabled && notifPerm === "granted" ? "translate-x-[22px]" : "translate-x-[3px]"}`} />
-              </button>
+        {/* Notifications + Navigation */}
+        <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden divide-y divide-stone-100 mb-4 shadow-sm">
+          {/* Notifs RDV */}
+          <button onClick={toggleNotif} className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-stone-50">
+            <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center"><IBell size={16} color="#7C3AED" /></div>
+            <div className="flex-1">
+              <p className="text-[13px] font-medium text-stone-800">Notifs rendez-vous</p>
+              <p className="text-[11px] text-stone-400">{notifPerm === "denied" ? "Bloquees par le navigateur" : notifEnabled ? "Activees" : "Desactivees"}</p>
             </div>
-            {/* Delay picker */}
-            {notifEnabled && notifPerm === "granted" && (
-              <div className="px-4 py-3">
-                <p className="text-[11px] text-stone-400 mb-2">Me prévenir avant chaque RDV</p>
-                <div className="flex flex-wrap gap-2">
-                  {[5, 10, 15, 30, 60].map((m) => (
-                    <button key={m} onClick={() => setNotifDelay(m)}
-                      className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all ${notifDelay === m ? "bg-blue-600 text-white" : "bg-stone-100 text-stone-600 active:bg-stone-200"}`}>
-                      {m < 60 ? m + " min" : "1h"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {/* Rappels notifications toggle */}
-            <div className="w-full flex items-center gap-3 px-4 py-3">
-              <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M5 3L2 6"/><path d="M22 6l-3-3"/></svg></div>
-              <div className="flex-1">
-                <p className="text-[13px] font-medium text-stone-800">Rappels</p>
-                <p className="text-[11px] text-stone-400">{remNotifEnabled ? "Activés" : "Désactivés"}</p>
-              </div>
-              <button onClick={() => {
-                if (notifPerm === "denied") { alert("Les notifications sont bloquées. Va dans les réglages de ton navigateur pour les réactiver."); return; }
-                if (notifPerm !== "granted") {
-                  Notification.requestPermission().then((p) => { setNotifPerm(p); if (p === "granted") setRemNotifEnabled(true); });
-                } else { setRemNotifEnabled(!remNotifEnabled); }
-              }}
-                className={`w-[46px] h-[26px] rounded-full transition-colors relative flex-shrink-0 ${remNotifEnabled && notifPerm === "granted" ? "bg-blue-600" : "bg-stone-300"}`}>
-                <div className={`absolute top-[3px] w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${remNotifEnabled && notifPerm === "granted" ? "translate-x-[22px]" : "translate-x-[3px]"}`} />
-              </button>
+            <Toggle on={notifEnabled && notifPerm === "granted"} />
+          </button>
+          {/* Delay */}
+          {notifEnabled && notifPerm === "granted" && (
+            <button onClick={() => setOpenSection("delay")} className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-stone-50">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+              <p className="text-[13px] font-medium text-stone-800 flex-1">Delai</p>
+              <p className="text-[12px] text-stone-400 mr-1">{notifDelay < 60 ? notifDelay + " min" : "1h"}</p>
+              <IChev />
+            </button>
+          )}
+          {/* Rappels */}
+          <button onClick={toggleRemNotif} className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-stone-50">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M5 3L2 6"/><path d="M22 6l-3-3"/></svg></div>
+            <div className="flex-1">
+              <p className="text-[13px] font-medium text-stone-800">Notifs rappels</p>
+              <p className="text-[11px] text-stone-400">{remNotifEnabled ? "Actives" : "Desactives"}</p>
             </div>
-          </div>
-        )}
-
-        {/* Navigation — collapsible */}
-        <button onClick={() => setOpenSection(openSection === "nav" ? null : "nav")} className="w-full flex items-center justify-between mb-2 mt-3">
-          <h3 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider">Navigation</h3>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${openSection === "nav" ? "rotate-180" : ""}`}><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        {openSection === "nav" && (
-          <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden mb-5 shadow-sm animate-fade-in">
-            {[
-              { id: "waze", name: "Waze", desc: "Navigation communautaire", logo: (
-                <img src="/waze-logo.png" alt="Waze" width={28} height={28} className="object-contain" />
-              )},
-              { id: "google", name: "Google Maps", desc: "Navigation Google", logo: (
-                <img src="/google-maps-logo.png" alt="Google Maps" width={28} height={28} className="object-contain" />
-              )},
-              { id: "apple", name: "Apple Plans", desc: "Navigation Apple", logo: (
-                <img src="/apple-maps-logo.png" alt="Apple Plans" width={28} height={28} className="object-contain" />
-              )},
-            ].map((app, i) => (
-              <button key={app.id} onClick={() => { setNavApp(app.id); }}
-                className={`w-full flex items-center gap-3 px-4 py-3 text-left active:bg-stone-50 ${i > 0 ? "border-t border-stone-100" : ""}`}>
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center">
-                  {app.logo}
-                </div>
-                <div className="flex-1">
-                  <p className="text-[13px] font-medium text-stone-800">{app.name}</p>
-                  <p className="text-[11px] text-stone-400">{app.desc}</p>
-                </div>
-                {navApp === app.id && <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center"><ICheck size={12} color="#fff" sw={2.5} /></div>}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Save */}
-        <button onClick={() => {
-          localStorage.setItem("roadcrm-avatar", String(avatar));
-          localStorage.setItem("roadcrm-nav", navApp);
-          localStorage.setItem("roadcrm-notif", notifEnabled ? "on" : "off");
-          localStorage.setItem("roadcrm-notif-delay", String(notifDelay));
-          localStorage.setItem("roadcrm-notif-rem", remNotifEnabled ? "on" : "off");
-          setSavedNav(navApp);
-          setSavedAvatar(avatar);
-          setSavedNotifEnabled(notifEnabled);
-          setSavedNotifDelay(notifDelay);
-          setSavedRemNotifEnabled(remNotifEnabled);
-          setSaved(true);
-          setTimeout(() => setSaved(false), 2000);
-        }}
-          className={`w-full flex items-center justify-center gap-2 py-3 text-[13px] font-semibold rounded-2xl shadow-sm active:scale-[0.98] transition-all mb-3 ${saved ? "bg-green-600 text-white" : "bg-stone-900 text-white"}`}>
-          {saved ? <><ICheck size={16} color="#fff" sw={2.5} /> Sauvegardé !</> : <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Sauvegarder</>}
-        </button>
+            <Toggle on={remNotifEnabled && notifPerm === "granted"} />
+          </button>
+          {/* Navigation */}
+          <button onClick={() => setOpenSection("nav")} className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-stone-50">
+            <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center"><INav size={16} color="#16A34A" /></div>
+            <p className="text-[13px] font-medium text-stone-800 flex-1">Navigation</p>
+            <p className="text-[12px] text-stone-400 mr-1">{navNames[navApp]}</p>
+            <IChev />
+          </button>
+        </div>
 
         {/* Logout */}
-        <button onClick={() => { if (window.confirm("Se déconnecter ?")) signOut(); }}
-          className="w-full flex items-center justify-center gap-2 py-3 text-[13px] font-medium text-red-600 bg-white border border-stone-200 rounded-2xl shadow-sm active:bg-red-50">
-          <ILogout size={16} color="#DC2626" /> Se déconnecter
-        </button>
+        <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden mb-4 shadow-sm">
+          <button onClick={() => { if (window.confirm("Se deconnecter ?")) signOut(); }}
+            className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-red-50">
+            <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center"><ILogout size={16} color="#DC2626" /></div>
+            <p className="text-[13px] font-medium text-red-600">Se deconnecter</p>
+          </button>
+        </div>
 
-        <p className="text-[10px] text-stone-300 text-center mt-6">RoadCRM v1.0</p>
+        <p className="text-[10px] text-stone-300 text-center mt-4">RoadCRM v1.0</p>
       </div>
     </div>
   );
