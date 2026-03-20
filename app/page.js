@@ -356,26 +356,9 @@ export default function Home() {
   };
 
   // ═══════════════════ AVATARS ═══════════════════════════════════════
-  const avatars = [
-    { bg: "#DBEAFE", hair: "#1E3A5F", skin: "#F5D0A9", shirt: "#2563EB" },
-    { bg: "#FEF3C7", hair: "#92400E", skin: "#D4A574", shirt: "#D97706" },
-    { bg: "#D1FAE5", hair: "#064E3B", skin: "#F5D0A9", shirt: "#059669" },
-    { bg: "#EDE9FE", hair: "#4C1D95", skin: "#E8C4A0", shirt: "#7C3AED" },
-    { bg: "#FFE4E6", hair: "#9F1239", skin: "#F5D0A9", shirt: "#E11D48" },
-    { bg: "#F0FDF4", hair: "#1A1A1A", skin: "#8D5524", shirt: "#16A34A" },
-    { bg: "#FFF7ED", hair: "#EA580C", skin: "#F5D0A9", shirt: "#F97316" },
-    { bg: "#F1F5F9", hair: "#334155", skin: "#D4A574", shirt: "#475569" },
-  ];
-  const AvatarSvg = ({ a, size = 40 }) => (
-    <svg width={size} height={size} viewBox="0 0 40 40">
-      <circle cx="20" cy="20" r="20" fill={a.bg} />
-      <ellipse cx="20" cy="30" rx="12" ry="10" fill={a.shirt} />
-      <circle cx="20" cy="16" r="9" fill={a.skin} />
-      <ellipse cx="20" cy="10" rx="9.5" ry="6" fill={a.hair} />
-      <circle cx="16" cy="16" r="1.2" fill="#1A1A1A" />
-      <circle cx="24" cy="16" r="1.2" fill="#1A1A1A" />
-      <ellipse cx="20" cy="20" rx="2.5" ry="1" fill="#E8A07E" />
-    </svg>
+  const avatarCount = 6;
+  const AvatarImg = ({ index, size = 40 }) => (
+    <img src={`/avatar-${index + 1}.png`} alt={`Avatar ${index + 1}`} width={size} height={size} className="rounded-full object-cover" />
   );
 
   // ═══════════════════ SETTINGS VIEW ════════════════════════════════
@@ -405,7 +388,7 @@ export default function Home() {
         <h3 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-2">Compte</h3>
         <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden mb-5 shadow-sm">
           <button onClick={() => setShowAvatarPicker(!showAvatarPicker)} className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-stone-50">
-            <AvatarSvg a={avatars[avatar]} size={44} />
+            <AvatarImg index={avatar} size={44} />
             <div className="flex-1">
               <p className="text-[13px] font-medium text-stone-800">{session?.user?.name || "Utilisateur"}</p>
               <p className="text-[11px] text-stone-400">Changer d{"'"}avatar</p>
@@ -416,10 +399,10 @@ export default function Home() {
             <div className="px-4 py-3 border-t border-stone-100">
               <p className="text-[11px] text-stone-400 mb-2">Choisis ton avatar</p>
               <div className="flex flex-wrap gap-2">
-                {avatars.map((a, i) => (
-                  <button key={i} onClick={() => { setAvatar(i); localStorage.setItem("roadcrm-avatar", String(i)); setShowAvatarPicker(false); }}
+                {Array.from({ length: avatarCount }, (_, i) => (
+                  <button key={i} onClick={() => { setAvatar(i); setShowAvatarPicker(false); }}
                     className={`rounded-full p-0.5 transition-all ${avatar === i ? "ring-2 ring-blue-500 ring-offset-2" : ""}`}>
-                    <AvatarSvg a={a} size={40} />
+                    <AvatarImg index={i} size={40} />
                   </button>
                 ))}
               </div>
