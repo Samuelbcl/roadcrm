@@ -194,6 +194,27 @@ export default function Home() {
 
   useEffect(() => { if (session) fetchAll(); }, [session, fetchAll]);
 
+  // Register service worker & sync appointments/reminders
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!navigator.serviceWorker?.controller) return;
+    navigator.serviceWorker.controller.postMessage({
+      type: "SYNC_APPTS",
+      appointments: appts.map((a) => ({ id: a.id, name: a.name, address: a.address, date: a.date, time: a.time, done: a.done })),
+    });
+  }, [appts]);
+
+  useEffect(() => {
+    if (!navigator.serviceWorker?.controller) return;
+    const reminders = notes.filter((n) => n.type === "reminder");
+    navigator.serviceWorker.controller.postMessage({ type: "SYNC_REMINDERS", reminders });
+  }, [notes]);
+
   const getApptNotes = (apptId) => notes.filter((n) => n.appointment_id === apptId);
 
   const addAppt = async () => {
@@ -416,14 +437,22 @@ export default function Home() {
           <button onClick={() => {
             if ("Notification" in window) {
               Notification.requestPermission().then((p) => {
-                if (p === "granted") alert("Notifications activées !");
-                else if (p === "denied") alert("Notifications bloquées. Vas dans les réglages de Safari pour les activer.");
+                if (p === "granted") {
+                  alert("Notifications activées ! Tu recevras une alerte 15 min avant chaque RDV.");
+                  if (navigator.serviceWorker?.controller) {
+                    navigator.serviceWorker.controller.postMessage({ type: "CLEAR_NOTIFIED" });
+                  }
+                }
+                else if (p === "denied") alert("Notifications bloquées. Va dans les réglages de ton navigateur pour les activer.");
                 else alert("Notifications en attente.");
               });
             } else { alert("Les notifications ne sont pas supportées sur ce navigateur."); }
           }} className="w-full flex items-center gap-3 px-4 py-3 text-left text-[13px] font-medium text-stone-800 active:bg-stone-50">
             <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center"><IBell size={16} color="#7C3AED" /></div>
-            Activer les notifications
+            <div className="flex-1">
+              <p className="text-[13px] font-medium text-stone-800">Activer les notifications</p>
+              <p className="text-[11px] text-stone-400">Alerte 15 min avant chaque RDV</p>
+            </div>
             <span className="ml-auto"><IChev /></span>
           </button>
         </div>
