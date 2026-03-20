@@ -152,6 +152,10 @@ export default function Home() {
   const [avatar, setAvatar] = useState(() => { if (typeof window === "undefined") return 0; return parseInt(localStorage.getItem("roadcrm-avatar") || "0"); });
   const [navApp, setNavApp] = useState(() => { if (typeof window === "undefined") return "waze"; return localStorage.getItem("roadcrm-nav") || "waze"; });
   const [saved, setSaved] = useState(false);
+  const [showUnsaved, setShowUnsaved] = useState(false);
+  const [savedNav, setSavedNav] = useState(() => { if (typeof window === "undefined") return "waze"; return localStorage.getItem("roadcrm-nav") || "waze"; });
+  const [savedAvatar, setSavedAvatar] = useState(() => { if (typeof window === "undefined") return 0; return parseInt(localStorage.getItem("roadcrm-avatar") || "0"); });
+  const settingsDirty = navApp !== savedNav || avatar !== savedAvatar;
 
   const userId = session?.user?.email || "unknown";
 
@@ -377,7 +381,21 @@ export default function Home() {
   // ═══════════════════ SETTINGS VIEW ════════════════════════════════
   if (view === "settings") return (
     <div className="min-h-screen bg-stone-100">
-      <div className="px-5 pt-4 pb-2"><button onClick={() => setView("home")} className="flex items-center gap-1.5 text-[13px] text-stone-500 font-medium"><IBack size={18} color="#6B6B6B" /> Retour</button></div>
+      {showUnsaved && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl p-5 mx-8 w-full max-w-xs shadow-xl">
+            <p className="text-[15px] font-semibold text-stone-800 mb-1">Modifications non sauvegardées</p>
+            <p className="text-[13px] text-stone-500 mb-5">Voulez-vous sauvegarder vos changements ?</p>
+            <div className="flex gap-2">
+              <button onClick={() => { setNavApp(savedNav); setAvatar(savedAvatar); setShowUnsaved(false); setView("home"); }}
+                className="flex-1 py-2.5 text-[13px] font-medium text-stone-600 bg-stone-100 rounded-xl active:bg-stone-200">Annuler</button>
+              <button onClick={() => { localStorage.setItem("roadcrm-nav", navApp); localStorage.setItem("roadcrm-avatar", String(avatar)); setSavedNav(navApp); setSavedAvatar(avatar); setShowUnsaved(false); setSaved(true); setTimeout(() => { setSaved(false); setView("home"); }, 800); }}
+                className="flex-1 py-2.5 text-[13px] font-semibold text-white bg-blue-600 rounded-xl active:bg-blue-700">Sauvegarder</button>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="px-5 pt-4 pb-2"><button onClick={() => { if (settingsDirty) { setShowUnsaved(true); } else { setView("home"); } }} className="flex items-center gap-1.5 text-[13px] text-stone-500 font-medium"><IBack size={18} color="#6B6B6B" /> Retour</button></div>
       <div className="px-5">
         <h1 className="text-xl font-bold tracking-tight mb-1">Réglages</h1>
         <p className="text-[12px] text-stone-400 mb-4">{session?.user?.email}</p>
@@ -432,18 +450,18 @@ export default function Home() {
         <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden mb-5 shadow-sm">
           {[
             { id: "waze", name: "Waze", desc: "Navigation communautaire", logo: (
-              <img src="/waze-logo.png" alt="Waze" width={22} height={22} className="object-contain" />
+              <img src="/waze-logo.png" alt="Waze" width={28} height={28} className="object-contain" />
             )},
             { id: "google", name: "Google Maps", desc: "Navigation Google", logo: (
-              <img src="/google-maps-logo.png" alt="Google Maps" width={22} height={22} className="object-contain" />
+              <img src="/google-maps-logo.png" alt="Google Maps" width={28} height={28} className="object-contain" />
             )},
             { id: "apple", name: "Apple Plans", desc: "Navigation Apple", logo: (
-              <img src="/apple-maps-logo.png" alt="Apple Plans" width={22} height={22} className="object-contain" />
+              <img src="/apple-maps-logo.png" alt="Apple Plans" width={28} height={28} className="object-contain" />
             )},
           ].map((app, i) => (
-            <button key={app.id} onClick={() => { setNavApp(app.id); localStorage.setItem("roadcrm-nav", app.id); }}
+            <button key={app.id} onClick={() => { setNavApp(app.id); }}
               className={`w-full flex items-center gap-3 px-4 py-3 text-left active:bg-stone-50 ${i > 0 ? "border-t border-stone-100" : ""}`}>
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-stone-50">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center">
                 {app.logo}
               </div>
               <div className="flex-1">
@@ -459,6 +477,8 @@ export default function Home() {
         <button onClick={() => {
           localStorage.setItem("roadcrm-avatar", String(avatar));
           localStorage.setItem("roadcrm-nav", navApp);
+          setSavedNav(navApp);
+          setSavedAvatar(avatar);
           setSaved(true);
           setTimeout(() => setSaved(false), 2000);
         }}
