@@ -990,7 +990,10 @@ export default function Home() {
               style={{ animationDelay: `${idx * 60}ms` }}>
               <div className="flex justify-between items-start">
                 <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                  {a.done && <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 mt-0.5"><ICheck size={12} color="#fff" sw={2.5} /></div>}
+                  <button onClick={(e) => { e.stopPropagation(); toggleDone(a.id); }}
+                    className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 transition-all ${a.done ? "bg-green-500" : "border-2 border-stone-300 active:border-green-400"}`}>
+                    {a.done && <ICheck size={12} color="#fff" sw={2.5} />}
+                  </button>
                   <div className="min-w-0 flex-1">
                     <p className={`text-[14px] font-semibold leading-snug ${a.done ? "line-through text-stone-400" : ""}`}>{a.name}</p>
                     <p className={`text-[12px] mt-0.5 truncate ${a.done ? "text-stone-400" : "text-stone-500"}`}>{a.address || "Pas d'adresse"}</p>
