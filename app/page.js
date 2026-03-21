@@ -45,6 +45,7 @@ const IClose = (p) => <I d="M18 6L6 18 M6 6l12 12" {...p} />;
 const ISearch = (p) => <I d="M11 3a8 8 0 1 0 0 16 8 8 0 0 0 0-16z M21 21l-4.35-4.35" {...p} />;
 const ISettings = (p) => <I d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" {...p} />;
 const IHome = (p) => <I d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10" {...p} />;
+const IPhone = (p) => <I d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" {...p} />;
 
 // ─── Bottom Navigation Bar ───────────────────────────
 const BottomNav = ({ view, setView, notes }) => (
@@ -140,6 +141,7 @@ export default function Home() {
   const recRef = useRef(null);
   const [fN, setFN] = useState("");
   const [fA, setFA] = useState("");
+  const [fP, setFP] = useState("");
   const [fD, setFD] = useState(toKey(new Date()));
   const [fT, setFT] = useState("09:00");
   const [remId, setRemId] = useState(null);
@@ -249,13 +251,13 @@ export default function Home() {
   const addAppt = async () => {
     if (!fN.trim() || !supabase) return;
     const id = uid();
-    const newAppt = { id, user_id: userId, name: fN.trim(), address: fA.trim(), date: fD, time: fT, done: false };
+    const newAppt = { id, user_id: userId, name: fN.trim(), address: fA.trim(), phone: fP.trim(), date: fD, time: fT, done: false };
     const { error } = await supabase.from("appointments").insert(newAppt);
     if (error) { console.error(error); return; }
     setAppts((prev) => [...prev, { ...newAppt, source: "manual", manual: true }].sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`)));
     const [y, m, d] = fD.split("-").map(Number);
     setSelDate(new Date(y, m - 1, d)); setCMonth(m - 1); setCYear(y);
-    setFN(""); setFA(""); setFT("09:00"); setFD(toKey(new Date())); setShowForm(false);
+    setFN(""); setFA(""); setFP(""); setFT("09:00"); setFD(toKey(new Date())); setShowForm(false);
     toast("Rendez-vous ajouté");
   };
 
@@ -733,12 +735,19 @@ export default function Home() {
           {sel.done && <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded uppercase">Terminé</span>}
         </div>
         <h1 className="text-xl font-bold tracking-tight mb-1">{sel.name}</h1>
-        <p className="text-[13px] text-stone-500 leading-relaxed mb-5">{sel.address || "Aucune adresse"}</p>
+        <p className="text-[13px] text-stone-500 leading-relaxed">{sel.address || "Aucune adresse"}</p>
+        {sel.phone && <p className="text-[13px] text-blue-600 font-medium mt-0.5">{sel.phone}</p>}
+        <div className="mb-5" />
 
         <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden divide-y divide-stone-100 mb-5 shadow-sm">
           <button onClick={() => openNav(sel.address)} className="w-full flex items-center gap-3 px-4 py-3 text-left text-[13px] font-medium text-stone-800 active:bg-stone-50" style={{ opacity: sel.address ? 1 : 0.4 }}>
             <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center"><INav size={16} color="#2563EB" /></div>Lancer {navNames[navApp]}<span className="ml-auto"><IChev /></span>
           </button>
+          {sel.phone && (
+            <a href={`tel:${sel.phone}`} className="w-full flex items-center gap-3 px-4 py-3 text-left text-[13px] font-medium text-stone-800 active:bg-stone-50">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center"><IPhone size={16} color="#059669" /></div>Appeler<span className="ml-auto text-[12px] text-stone-400 font-normal">{sel.phone}</span>
+            </a>
+          )}
           <button onClick={() => startVoice(sel.id)} className="w-full flex items-center gap-3 px-4 py-3 text-left text-[13px] font-medium text-stone-800 active:bg-stone-50">
             <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center"><IMic size={16} color="#EA580C" /></div>Note vocale<span className="ml-auto"><IChev /></span>
           </button>
@@ -936,6 +945,8 @@ export default function Home() {
         <input className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition mb-2.5" placeholder="Nom du client ou entreprise" value={fN} onChange={(e) => setFN(e.target.value)} />
         <label className="block text-[11px] font-semibold text-stone-500 mb-1">Adresse</label>
         <input className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition mb-2.5" placeholder="Adresse complète" value={fA} onChange={(e) => setFA(e.target.value)} />
+        <label className="block text-[11px] font-semibold text-stone-500 mb-1">Téléphone</label>
+        <input type="tel" className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition mb-2.5" placeholder="06 12 34 56 78" value={fP} onChange={(e) => setFP(e.target.value)} />
         <div className="flex gap-2 mb-3">
           <div className="flex-1"><label className="block text-[11px] font-semibold text-stone-500 mb-1">Date</label><input type="date" className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition" value={fD} onChange={(e) => setFD(e.target.value)} /></div>
           <div className="flex-1"><label className="block text-[11px] font-semibold text-stone-500 mb-1">Heure</label><input type="time" className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition" value={fT} onChange={(e) => setFT(e.target.value)} /></div>
