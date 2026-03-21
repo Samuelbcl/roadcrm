@@ -259,6 +259,16 @@ export default function Home() {
     setSelDate(new Date(y, m - 1, d)); setCMonth(m - 1); setCYear(y);
     setFN(""); setFA(""); setFP(""); setFT("09:00"); setFD(toKey(new Date())); setShowForm(false);
     toast("Rendez-vous ajouté");
+    // Sync to Google Calendar in background
+    if (session?.accessToken) {
+      try {
+        await fetch("/api/calendar/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: session.accessToken, summary: newAppt.name, location: newAppt.address, date: newAppt.date, time: newAppt.time }),
+        });
+      } catch {}
+    }
   };
 
   const toggleDone = async (id) => {
