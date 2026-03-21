@@ -156,6 +156,14 @@ export default function Home() {
   const [remNotifEnabled, setRemNotifEnabled] = useState(() => { if (typeof window === "undefined") return true; return localStorage.getItem("roadcrm-notif-rem") !== "off"; });
   const [notifPerm, setNotifPerm] = useState("default");
   const [openSection, setOpenSection] = useState(null);
+  const [toasts, setToasts] = useState([]);
+
+  const toast = useCallback((msg, type = "success") => {
+    const id = uid();
+    setToasts((prev) => [...prev, { id, msg, type, leaving: false }]);
+    setTimeout(() => setToasts((prev) => prev.map((t) => t.id === id ? { ...t, leaving: true } : t)), 2200);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 2500);
+  }, []);
 
   const userId = session?.user?.email || "unknown";
 
@@ -248,6 +256,7 @@ export default function Home() {
     const [y, m, d] = fD.split("-").map(Number);
     setSelDate(new Date(y, m - 1, d)); setCMonth(m - 1); setCYear(y);
     setFN(""); setFA(""); setFT("09:00"); setFD(toKey(new Date())); setShowForm(false);
+    toast("Rendez-vous ajouté");
   };
 
   const toggleDone = async (id) => {
@@ -266,6 +275,7 @@ export default function Home() {
       }
     }
     setAppts((prev) => prev.map((a) => a.id === id ? { ...a, done: newDone } : a));
+    toast(newDone ? "Marqué terminé" : "Marqué non terminé");
   };
 
   const delAppt = async (id) => {
@@ -274,6 +284,7 @@ export default function Home() {
     await supabase.from("appointments").delete().eq("id", id);
     setAppts((prev) => prev.filter((a) => a.id !== id));
     setNotes((prev) => prev.filter((n) => n.appointment_id !== id));
+    toast("Rendez-vous supprimé");
     setView("home");
   };
 
@@ -281,6 +292,7 @@ export default function Home() {
     if (!supabase) return;
     await supabase.from("notes").delete().eq("id", id);
     setNotes((prev) => prev.filter((n) => n.id !== id));
+    toast("Note supprimée");
   };
 
   const openNav = (addr) => {
@@ -326,7 +338,7 @@ export default function Home() {
     if (!trans.trim() || !voiceId || !supabase) return;
     const note = { id: uid(), appointment_id: voiceId, user_id: userId, type: "voice", text: trans.trim(), delay: null };
     const { error } = await supabase.from("notes").insert(note);
-    if (!error) setNotes((prev) => [{ ...note, created_at: new Date().toISOString() }, ...prev]);
+    if (!error) { setNotes((prev) => [{ ...note, created_at: new Date().toISOString() }, ...prev]); toast("Note vocale enregistrée"); }
     closeVoice();
   };
 
@@ -340,7 +352,7 @@ export default function Home() {
     if (!rTxt.trim() || !rDel || !remId || !supabase) return;
     const note = { id: uid(), appointment_id: remId, user_id: userId, type: "reminder", text: rTxt.trim(), delay: rDel };
     const { error } = await supabase.from("notes").insert(note);
-    if (!error) setNotes((prev) => [{ ...note, created_at: new Date().toISOString() }, ...prev]);
+    if (!error) { setNotes((prev) => [{ ...note, created_at: new Date().toISOString() }, ...prev]); toast("Rappel programmé"); }
     if ("Notification" in window) Notification.requestPermission().then((p) => { if (p === "granted") setTimeout(() => new Notification("RoadCRM", { body: rTxt.trim() }), rDel * 60 * 1000); });
     setShowReminder(false); setRTxt(""); setRDel(null); setRemId(null);
   };
@@ -433,9 +445,20 @@ export default function Home() {
     </div>
   );
 
+  const Toasts = () => toasts.length > 0 ? (
+    <div className="fixed top-4 left-0 right-0 z-[60] flex flex-col items-center gap-2 px-5 pointer-events-none" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+      {toasts.map((t) => (
+        <div key={t.id} className={`px-4 py-2.5 rounded-xl text-[13px] font-semibold shadow-lg pointer-events-auto ${t.leaving ? "animate-toast-out" : "animate-toast-in"} ${
+          t.type === "success" ? "bg-green-600 text-white" : t.type === "error" ? "bg-red-600 text-white" : "bg-stone-800 text-white"
+        }`}>{t.msg}</div>
+      ))}
+    </div>
+  ) : null;
+
   // ═══════════════════ SETTINGS VIEW ════════════════════════════════
   if (view === "settings") return (
     <div className="min-h-screen bg-stone-100">
+      <Toasts />
       {/* Nav picker sheet */}
       {openSection === "nav" && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setOpenSection(null)}>
@@ -585,6 +608,7 @@ export default function Home() {
 
   if (view === "search") return (
     <div className="min-h-screen bg-stone-100">
+      <Toasts />
       <div className="px-5 pt-4 pb-2">
         <div className="flex items-center gap-3">
           <button onClick={() => { setView("home"); setSearchQuery(""); setShowSearch(false); }} className="flex-shrink-0"><IBack size={18} color="#6B6B6B" /></button>
@@ -646,6 +670,7 @@ export default function Home() {
     const grouped = groupByDate(activeNotes);
     return (
       <div className="min-h-screen bg-stone-100">
+        <Toasts />
         <div className="px-5 pt-4 pb-2"><button onClick={() => setView("home")} className="flex items-center gap-1.5 text-[13px] text-stone-500 font-medium"><IBack size={18} color="#6B6B6B" /> Retour</button></div>
         <div className="px-5 mb-3">
           <h1 className="text-xl font-bold tracking-tight mb-3">Notes & Rappels</h1>
@@ -700,6 +725,7 @@ export default function Home() {
   // ═══════════════════ DETAIL VIEW ════════════════════════════════
   if (view === "detail" && sel) return (
     <div className="min-h-screen bg-stone-100">
+      <Toasts />
       <div className="px-5 pt-4 pb-2"><button onClick={() => setView("home")} className="flex items-center gap-1.5 text-[13px] text-stone-500 font-medium"><IBack size={18} color="#6B6B6B" /> Retour</button></div>
       <div className="px-5 pb-32">
         <div className="flex items-center gap-2 mb-1">
@@ -803,6 +829,7 @@ export default function Home() {
   // ═══════════════════ HOME VIEW ══════════════════════════════════
   return (
     <div className="min-h-screen bg-stone-100 animate-view-in">
+      <Toasts />
       <div className="px-5 pt-5 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button onClick={() => setView("settings")} className="active:scale-95 transition-transform">
