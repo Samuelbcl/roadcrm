@@ -403,6 +403,16 @@ export default function Home() {
   const todayAppts = appts.filter((a) => a.date === todayKey);
   const nextAppt = todayAppts.find((a) => !a.done);
   const apptDates = new Set(appts.map((a) => a.date));
+
+  // Week & month stats
+  const weekStart = new Date(today); weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
+  const weekStartKey = toKey(weekStart); const weekEndKey = toKey(weekEnd);
+  const weekAppts = appts.filter((a) => a.date >= weekStartKey && a.date <= weekEndKey);
+  const weekDone = weekAppts.filter((a) => a.done).length;
+  const monthKey = `${today.getFullYear()}-${pad(today.getMonth() + 1)}`;
+  const monthAppts = appts.filter((a) => a.date.startsWith(monthKey));
+  const monthDone = monthAppts.filter((a) => a.done).length;
   const selDateStr = selDate.toLocaleDateString("fr-BE", { weekday: "long", day: "numeric", month: "long" });
   const sel = appts.find((a) => a.id === selId);
   const selNotes = sel ? getApptNotes(sel.id) : [];
@@ -860,6 +870,35 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {!loading && (weekAppts.length > 0 || monthAppts.length > 0) && (
+        <div className="px-5 mb-3 flex gap-2">
+          <div className="flex-1 bg-white border border-stone-200 rounded-xl px-3 py-2 shadow-sm">
+            <p className="text-[10px] text-stone-400 font-semibold uppercase tracking-wider">Semaine</p>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="text-[17px] font-bold text-stone-800">{weekDone}</span>
+              <span className="text-[12px] text-stone-400 font-medium">/ {weekAppts.length}</span>
+            </div>
+            {weekAppts.length > 0 && (
+              <div className="mt-1.5 h-1 bg-stone-100 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(weekDone / weekAppts.length) * 100}%` }} />
+              </div>
+            )}
+          </div>
+          <div className="flex-1 bg-white border border-stone-200 rounded-xl px-3 py-2 shadow-sm">
+            <p className="text-[10px] text-stone-400 font-semibold uppercase tracking-wider">Mois</p>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="text-[17px] font-bold text-stone-800">{monthDone}</span>
+              <span className="text-[12px] text-stone-400 font-medium">/ {monthAppts.length}</span>
+            </div>
+            {monthAppts.length > 0 && (
+              <div className="mt-1.5 h-1 bg-stone-100 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(monthDone / monthAppts.length) * 100}%` }} />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <SkeletonNextAppt />
