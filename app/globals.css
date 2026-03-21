@@ -113,6 +113,70 @@ input, button, textarea {
   animation: toastOut 0.2s ease-in forwards;
 }
 
+/* ═══ Dark Mode ═══════════════════════════════════════════════ */
+html.dark { color-scheme: dark; }
+
+/* Surfaces */
+html.dark .bg-stone-100 { background-color: #1c1917 !important; }
+html.dark .bg-white,
+html.dark .focus\:bg-white:focus { background-color: #292524 !important; }
+html.dark .bg-white\/95 { background-color: rgba(41,37,36,0.95) !important; }
+html.dark .bg-white\/97 { background-color: rgba(41,37,36,0.97) !important; }
+html.dark .bg-stone-50 { background-color: #292524 !important; }
+html.dark .bg-stone-200 { background-color: #44403c !important; }
+
+/* Borders & dividers */
+html.dark .border-stone-200 { border-color: #44403c !important; }
+html.dark .border-stone-100 { border-color: #44403c !important; }
+html.dark .border-stone-300 { border-color: #57534e !important; }
+html.dark .divide-stone-100 > :not([hidden]) ~ :not([hidden]) { border-color: #44403c !important; }
+html.dark .border-green-200 { border-color: rgba(22,163,98,0.3) !important; }
+html.dark .border-t.border-stone-200 { border-color: #44403c !important; }
+
+/* Text */
+html.dark .text-stone-800 { color: #e7e5e4 !important; }
+html.dark .text-stone-700 { color: #d6d3d1 !important; }
+html.dark .text-stone-600 { color: #a8a29e !important; }
+html.dark .text-stone-500 { color: #a8a29e !important; }
+html.dark .text-stone-400 { color: #78716c !important; }
+html.dark .text-stone-300 { color: #57534e !important; }
+
+/* Primary buttons: invert for contrast */
+html.dark .bg-stone-900 { background-color: #e7e5e4 !important; }
+html.dark .bg-stone-900.text-white { color: #1c1917 !important; }
+html.dark .bg-stone-900 svg { stroke: #1c1917 !important; }
+html.dark .bg-stone-300 { background-color: #57534e !important; }
+
+/* Accent tint backgrounds */
+html.dark .bg-blue-50 { background-color: rgba(37,99,235,0.15) !important; }
+html.dark .bg-green-50 { background-color: rgba(22,163,98,0.15) !important; }
+html.dark .bg-green-50\/30 { background-color: rgba(22,163,98,0.08) !important; }
+html.dark .bg-violet-50 { background-color: rgba(124,58,237,0.15) !important; }
+html.dark .bg-orange-50 { background-color: rgba(234,88,12,0.15) !important; }
+html.dark .bg-red-50 { background-color: rgba(220,38,38,0.15) !important; }
+html.dark .bg-amber-50 { background-color: rgba(217,119,6,0.15) !important; }
+html.dark .bg-emerald-50 { background-color: rgba(5,150,105,0.15) !important; }
+
+/* Inputs */
+html.dark input, html.dark textarea { color: #e7e5e4; }
+html.dark input::placeholder { color: #57534e; }
+
+/* Skeleton */
+html.dark .skeleton {
+  background: linear-gradient(90deg, #292524 25%, #44403c 50%, #292524 75%) !important;
+  background-size: 200% 100%;
+}
+
+/* Active/hover states */
+html.dark .active\:bg-stone-50:active { background-color: #44403c !important; }
+html.dark .active\:bg-stone-200:active { background-color: #57534e !important; }
+html.dark .active\:bg-stone-100:active { background-color: #292524 !important; }
+html.dark .active\:bg-stone-600:active { background-color: #57534e !important; }
+html.dark .active\:bg-red-50:active { background-color: rgba(220,38,38,0.15) !important; }
+
+/* Ring offset for avatar picker */
+html.dark .ring-offset-2 { --tw-ring-offset-color: #1c1917; }
+
 /* Bottom nav safe area */
 .safe-nav-bottom {
   padding-bottom: env(safe-area-inset-bottom);

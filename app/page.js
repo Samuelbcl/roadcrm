@@ -46,6 +46,7 @@ const ISearch = (p) => <I d="M11 3a8 8 0 1 0 0 16 8 8 0 0 0 0-16z M21 21l-4.35-4
 const ISettings = (p) => <I d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" {...p} />;
 const IHome = (p) => <I d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10" {...p} />;
 const IPhone = (p) => <I d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" {...p} />;
+const IMoon = (p) => <I d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" {...p} />;
 
 // ─── Bottom Navigation Bar ───────────────────────────
 const BottomNav = ({ view, setView, notes }) => (
@@ -158,6 +159,7 @@ export default function Home() {
   const [remNotifEnabled, setRemNotifEnabled] = useState(() => { if (typeof window === "undefined") return true; return localStorage.getItem("roadcrm-notif-rem") !== "off"; });
   const [notifPerm, setNotifPerm] = useState("default");
   const [openSection, setOpenSection] = useState(null);
+  const [dark, setDark] = useState(() => { if (typeof window === "undefined") return false; return localStorage.getItem("roadcrm-dark") === "on"; });
   const [toasts, setToasts] = useState([]);
 
   const toast = useCallback((msg, type = "success") => {
@@ -207,6 +209,10 @@ export default function Home() {
   }, [session, toast, loadManualAppts, loadNotes]);
 
   useEffect(() => { if (session) fetchAll(); }, [session, fetchAll]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+  }, [dark]);
 
   // Register service worker & listen for notification clicks
   useEffect(() => {
@@ -584,6 +590,15 @@ export default function Home() {
             <p className="text-[13px] font-medium text-stone-800 flex-1">Navigation</p>
             <p className="text-[12px] text-stone-400 mr-1">{navNames[navApp]}</p>
             <IChev />
+          </button>
+          {/* Dark mode */}
+          <button onClick={() => { const v = !dark; setDark(v); autoSave("roadcrm-dark", v ? "on" : "off"); }} className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-stone-50">
+            <div className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center"><IMoon size={16} color="#78716c" /></div>
+            <div className="flex-1">
+              <p className="text-[13px] font-medium text-stone-800">Mode sombre</p>
+              <p className="text-[11px] text-stone-400">{dark ? "Activé" : "Désactivé"}</p>
+            </div>
+            <Toggle on={dark} />
           </button>
         </div>
 
