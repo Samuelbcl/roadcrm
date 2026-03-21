@@ -186,6 +186,10 @@ export default function Home() {
       }
       await loadNotes();
       const googleIds = new Set(googleAppts.map((a) => a.id));
+      // Apply saved done statuses from Supabase to Google events
+      const savedById = {};
+      manualAppts.forEach((a) => { if (googleIds.has(a.id)) savedById[a.id] = a; });
+      googleAppts = googleAppts.map((a) => savedById[a.id] ? { ...a, done: savedById[a.id].done } : a);
       const uniqueManual = manualAppts.filter((a) => !googleIds.has(a.id));
       setAppts([...googleAppts, ...uniqueManual].sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`)));
     } catch (err) { console.error(err); }
@@ -250,7 +254,17 @@ export default function Home() {
     const appt = appts.find((a) => a.id === id);
     if (!appt) return;
     const newDone = !appt.done;
-    if (appt.source === "manual" && supabase) await supabase.from("appointments").update({ done: newDone }).eq("id", id);
+    if (supabase) {
+      if (appt.source === "manual") {
+        await supabase.from("appointments").update({ done: newDone }).eq("id", id);
+      } else {
+        // Persist done status for Google events too
+        await supabase.from("appointments").upsert({
+          id, user_id: userId, name: appt.name, address: appt.address || "",
+          date: appt.date, time: appt.time, done: newDone
+        }, { onConflict: "id" });
+      }
+    }
     setAppts((prev) => prev.map((a) => a.id === id ? { ...a, done: newDone } : a));
   };
 
@@ -697,7 +711,7 @@ export default function Home() {
 
         <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden divide-y divide-stone-100 mb-5 shadow-sm">
           <button onClick={() => openNav(sel.address)} className="w-full flex items-center gap-3 px-4 py-3 text-left text-[13px] font-medium text-stone-800 active:bg-stone-50" style={{ opacity: sel.address ? 1 : 0.4 }}>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center"><INav size={16} color="#2563EB" /></div>Lancer Waze<span className="ml-auto"><IChev /></span>
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center"><INav size={16} color="#2563EB" /></div>Lancer {navNames[navApp]}<span className="ml-auto"><IChev /></span>
           </button>
           <button onClick={() => startVoice(sel.id)} className="w-full flex items-center gap-3 px-4 py-3 text-left text-[13px] font-medium text-stone-800 active:bg-stone-50">
             <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center"><IMic size={16} color="#EA580C" /></div>Note vocale<span className="ml-auto"><IChev /></span>
