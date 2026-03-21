@@ -202,9 +202,9 @@ export default function Home() {
       googleAppts = googleAppts.map((a) => savedById[a.id] ? { ...a, done: savedById[a.id].done } : a);
       const uniqueManual = manualAppts.filter((a) => !googleIds.has(a.id));
       setAppts([...googleAppts, ...uniqueManual].sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`)));
-    } catch (err) { console.error(err); }
+    } catch (err) { toast("Erreur de chargement", "error"); }
     finally { setLoading(false); }
-  }, [session, loadManualAppts, loadNotes]);
+  }, [session, toast, loadManualAppts, loadNotes]);
 
   useEffect(() => { if (session) fetchAll(); }, [session, fetchAll]);
 
@@ -253,7 +253,7 @@ export default function Home() {
     const id = uid();
     const newAppt = { id, user_id: userId, name: fN.trim(), address: fA.trim(), phone: fP.trim(), date: fD, time: fT, done: false };
     const { error } = await supabase.from("appointments").insert(newAppt);
-    if (error) { console.error(error); return; }
+    if (error) { toast("Erreur lors de l'ajout", "error"); return; }
     setAppts((prev) => [...prev, { ...newAppt, source: "manual", manual: true }].sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`)));
     const [y, m, d] = fD.split("-").map(Number);
     setSelDate(new Date(y, m - 1, d)); setCMonth(m - 1); setCYear(y);
@@ -751,12 +751,16 @@ export default function Home() {
       <div className="px-5 pt-4 pb-2"><button onClick={() => setView("home")} className="flex items-center gap-1.5 text-[13px] text-stone-500 font-medium"><IBack size={18} color="#6B6B6B" /> Retour</button></div>
       <div className="px-5 pb-32">
         <div className="flex items-center gap-2 mb-1">
-          <span className="font-mono text-[13px] text-stone-500 font-medium">{sel.time}{sel.timeEnd ? ` – ${sel.timeEnd}` : ""}</span>
+          <span className="text-[12px] text-stone-400">{new Date(sel.date + "T00:00").toLocaleDateString("fr-BE", { weekday: "long", day: "numeric", month: "long" })}</span>
           {sel.done && <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded uppercase">Terminé</span>}
         </div>
-        <h1 className="text-xl font-bold tracking-tight mb-1">{sel.name}</h1>
+        <div className="flex items-baseline gap-2 mb-1">
+          <h1 className="text-xl font-bold tracking-tight">{sel.name}</h1>
+          <span className="font-mono text-[13px] text-stone-500 font-medium">{sel.time}{sel.timeEnd ? ` – ${sel.timeEnd}` : ""}</span>
+        </div>
         <p className="text-[13px] text-stone-500 leading-relaxed">{sel.address || "Aucune adresse"}</p>
         {sel.phone && <p className="text-[13px] text-blue-600 font-medium mt-0.5">{sel.phone}</p>}
+        {sel.description && <p className="text-[12px] text-stone-500 mt-1.5 bg-stone-50 rounded-lg px-3 py-2 leading-relaxed">{sel.description}</p>}
         <div className="mb-5" />
 
         <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden divide-y divide-stone-100 mb-5 shadow-sm">
@@ -780,7 +784,28 @@ export default function Home() {
           </button>
         </div>
 
-        {sel.source === "manual" && <button onClick={() => delAppt(sel.id)} className="w-full flex items-center justify-center gap-2 py-2.5 text-[13px] font-medium text-red-600 rounded-xl active:bg-red-50"><ITrash size={15} color="#DC2626" /> Supprimer</button>}
+        {sel.source === "manual" && <button onClick={() => { if (window.confirm("Supprimer ce rendez-vous ?")) delAppt(sel.id); }} className="w-full flex items-center justify-center gap-2 py-2.5 text-[13px] font-medium text-red-600 rounded-xl active:bg-red-50"><ITrash size={15} color="#DC2626" /> Supprimer</button>}
+
+        {(() => {
+          const clientHistory = appts.filter((a) => a.id !== sel.id && a.name.toLowerCase() === sel.name.toLowerCase()).sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`));
+          return clientHistory.length > 0 ? (
+            <div className="mt-5">
+              <h3 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-2">Historique · {sel.name} ({clientHistory.length})</h3>
+              {clientHistory.slice(0, 5).map((a) => (
+                <button key={a.id} onClick={() => setSelId(a.id)} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 mb-1.5 shadow-sm text-left active:bg-stone-50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {a.done && <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0"><ICheck size={10} color="#fff" sw={2.5} /></div>}
+                      <p className="text-[12px] text-stone-500">{new Date(a.date + "T00:00").toLocaleDateString("fr-BE", { day: "numeric", month: "short", year: "numeric" })}</p>
+                    </div>
+                    <span className="font-mono text-[11px] text-stone-400">{a.time}</span>
+                  </div>
+                </button>
+              ))}
+              {clientHistory.length > 5 && <p className="text-[11px] text-stone-400 text-center mt-1">+ {clientHistory.length - 5} autres</p>}
+            </div>
+          ) : null;
+        })()}
 
         {selNotes.length > 0 && (
           <div className="mt-5">
