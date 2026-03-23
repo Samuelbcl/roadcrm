@@ -47,6 +47,7 @@ const ISettings = (p) => <I d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65
 const IHome = (p) => <I d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10" {...p} />;
 const IPhone = (p) => <I d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" {...p} />;
 const IMoon = (p) => <I d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" {...p} />;
+const IDownload = (p) => <I d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3" {...p} />;
 
 // ─── Bottom Navigation Bar ───────────────────────────
 const BottomNav = ({ view, setView, notes }) => (
@@ -54,7 +55,7 @@ const BottomNav = ({ view, setView, notes }) => (
     <div className="flex items-center justify-around px-2 py-1.5">
       {[
         { id: "home", icon: IHome, label: "Accueil" },
-        { id: "search", icon: ISearch, label: "Recherche" },
+        { id: "search", icon: ISearch, label: "Clients" },
         { id: "notes", icon: INote, label: "Notes" },
         { id: "settings", icon: ISettings, label: "Réglages" },
       ].map((tab) => {
@@ -602,6 +603,28 @@ export default function Home() {
           </button>
         </div>
 
+        {/* Export */}
+        <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden mb-4 shadow-sm">
+          <button onClick={() => {
+            const esc = (s) => `"${String(s || "").replace(/"/g, '""')}"`;
+            const header = "Date,Heure,Client,Adresse,Téléphone,Statut,Source";
+            const rows = appts.map((a) => [a.date, a.time, esc(a.name), esc(a.address), esc(a.phone || ""), a.done ? "Terminé" : "Planifié", a.source || "manual"].join(","));
+            const csv = "\uFEFF" + [header, ...rows].join("\n");
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a"); a.href = url; a.download = `roadcrm-export-${toKey(new Date())}.csv`; a.click();
+            URL.revokeObjectURL(url);
+            toast("Export CSV téléchargé");
+          }} className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-stone-50">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center"><IDownload size={16} color="#2563EB" /></div>
+            <div className="flex-1">
+              <p className="text-[13px] font-medium text-stone-800">Exporter en CSV</p>
+              <p className="text-[11px] text-stone-400">{appts.length} rendez-vous</p>
+            </div>
+            <IChev />
+          </button>
+        </div>
+
         {/* Logout */}
         <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden mb-4 shadow-sm">
           <button onClick={() => { if (window.confirm("Se deconnecter ?")) signOut(); }}
@@ -663,9 +686,37 @@ export default function Home() {
       </div>
 
       <div className="px-5 pt-2 pb-20">
-        {searchQuery.trim().length < 2 ? (
-          <p className="text-[13px] text-stone-400 text-center py-8">Tape au moins 2 caractères</p>
-        ) : searchResults.length === 0 ? (
+        {searchQuery.trim().length < 2 ? (() => {
+          const clients = {};
+          appts.forEach((a) => {
+            const key = a.name.toLowerCase().trim();
+            if (!clients[key]) clients[key] = { name: a.name, count: 0, doneCount: 0, lastDate: a.date, phone: a.phone };
+            clients[key].count++;
+            if (a.done) clients[key].doneCount++;
+            if (a.date > clients[key].lastDate) clients[key].lastDate = a.date;
+            if (a.phone && !clients[key].phone) clients[key].phone = a.phone;
+          });
+          const clientList = Object.values(clients).sort((a, b) => b.lastDate.localeCompare(a.lastDate));
+          return clientList.length > 0 ? (
+            <>
+              <p className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-2">Clients · {clientList.length}</p>
+              <div className="flex flex-col gap-1.5">
+                {clientList.map((c) => (
+                  <button key={c.name} onClick={() => setSearchQuery(c.name)}
+                    className="bg-white border border-stone-200 rounded-xl px-4 py-3 text-left active:bg-stone-50 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[14px] font-semibold leading-snug">{c.name}</p>
+                        <p className="text-[11px] text-stone-400 mt-0.5">{c.count} RDV · {c.doneCount} terminé{c.doneCount !== 1 ? "s" : ""}{c.phone ? ` · ${c.phone}` : ""}</p>
+                      </div>
+                      <span className="text-[11px] text-stone-400">{new Date(c.lastDate + "T00:00").toLocaleDateString("fr-BE", { day: "numeric", month: "short" })}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : <p className="text-[13px] text-stone-400 text-center py-8">Aucun client</p>;
+        })() : searchResults.length === 0 ? (
           <p className="text-[13px] text-stone-400 text-center py-8">Aucun résultat pour "{searchQuery}"</p>
         ) : (
           <>
