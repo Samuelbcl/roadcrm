@@ -6,6 +6,15 @@ import { uid, pad, toKey, DAYS, MONTHS, getDateGroup, GROUP_ORDER, getCalDays } 
 import { INav, IMic, IStop, IPlus, IBell, ICheck, ITrash, IBack, IFwd, IChev, IRefresh, ILogout, ICal, IClose, ISearch, IPhone, IMoon, IDownload, IEdit, IShare } from "@/components/Icons";
 import { BottomNav, SkeletonCard, SkeletonNextAppt, Sheet } from "@/components/UI";
 
+const REPORT_STATUSES = [
+  { id: "prospect", label: "Prospect", color: "bg-yellow-50 text-yellow-700 border-yellow-200" },
+  { id: "interesse", label: "Intéressé", color: "bg-blue-50 text-blue-700 border-blue-200" },
+  { id: "devis", label: "Devis envoyé", color: "bg-violet-50 text-violet-700 border-violet-200" },
+  { id: "signe", label: "Signé", color: "bg-green-50 text-green-700 border-green-200" },
+  { id: "refuse", label: "Refusé", color: "bg-red-50 text-red-700 border-red-200" },
+  { id: "relance", label: "À relancer", color: "bg-orange-50 text-orange-700 border-orange-200" },
+];
+
 export default function Home() {
   const { data: session, status } = useSession();
   const [appts, setAppts] = useState([]);
@@ -16,6 +25,8 @@ export default function Home() {
   const [cYear, setCYear] = useState(new Date().getFullYear());
   const [view, setView] = useState("home");
   const [selId, setSelId] = useState(null);
+  const [pullY, setPullY] = useState(0);
+  const pullStart = useRef(null);
   const [showForm, setShowForm] = useState(false);
   const [showVoice, setShowVoice] = useState(false);
   const [showReminder, setShowReminder] = useState(false);
@@ -39,6 +50,10 @@ export default function Home() {
   const [eP, setEP] = useState("");
   const [eD, setED] = useState("");
   const [eT, setET] = useState("");
+  const [showReport, setShowReport] = useState(false);
+  const [reportId, setReportId] = useState(null);
+  const [reportStatus, setReportStatus] = useState(null);
+  const [reportText, setReportText] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [avatar, setAvatar] = useState(() => { if (typeof window === "undefined") return 0; return parseInt(localStorage.getItem("roadcrm-avatar") || "0"); });
@@ -142,6 +157,31 @@ export default function Home() {
   }, [notes, remNotifEnabled]);
 
   const getApptNotes = (apptId) => notes.filter((n) => n.appointment_id === apptId);
+  const getApptReport = (apptId) => notes.find((n) => n.appointment_id === apptId && n.type === "report");
+
+  const openReport = (id) => {
+    const existing = getApptReport(id);
+    if (existing) {
+      const parts = existing.text.split("|");
+      setReportStatus(parts[0]); setReportText(parts.slice(1).join("|"));
+    } else { setReportStatus(null); setReportText(""); }
+    setReportId(id); setShowReport(true);
+  };
+  const saveReport = async () => {
+    if (!reportStatus || !reportId || !supabase) return;
+    const text = `${reportStatus}|${reportText.trim()}`;
+    const existing = getApptReport(reportId);
+    if (existing) {
+      await supabase.from("notes").update({ text }).eq("id", existing.id);
+      setNotes((prev) => prev.map((n) => n.id === existing.id ? { ...n, text } : n));
+    } else {
+      const note = { id: uid(), appointment_id: reportId, user_id: userId, type: "report", text, delay: null };
+      const { error } = await supabase.from("notes").insert(note);
+      if (!error) setNotes((prev) => [{ ...note, created_at: new Date().toISOString() }, ...prev]);
+    }
+    setShowReport(false); setReportId(null); setReportStatus(null); setReportText("");
+    toast("Compte-rendu enregistré");
+  };
 
   const addAppt = async () => {
     if (!fN.trim() || !supabase) return;
@@ -743,6 +783,7 @@ export default function Home() {
             <div className="flex items-center gap-2 mb-1">
               <span className="text-[12px] text-stone-400">{new Date(sel.date + "T00:00").toLocaleDateString("fr-BE", { weekday: "long", day: "numeric", month: "long" })}</span>
               {sel.done && <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded uppercase">Terminé</span>}
+              {(() => { const r = getApptReport(sel.id); if (!r) return null; const s = REPORT_STATUSES.find((s) => s.id === r.text.split("|")[0]); return s ? <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${s.color}`}>{s.label}</span> : null; })()}
             </div>
             <div className="flex items-baseline gap-2 mb-1">
               <h1 className="text-xl font-bold tracking-tight">{sel.name}</h1>
@@ -769,6 +810,12 @@ export default function Home() {
           </button>
           <button onClick={() => openReminder(sel.id)} className="w-full flex items-center gap-3 px-4 py-3 text-left text-[13px] font-medium text-stone-800 active:bg-stone-50">
             <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center"><IBell size={16} color="#7C3AED" /></div>Rappel<span className="ml-auto"><IChev /></span>
+          </button>
+          <button onClick={() => openReport(sel.id)} className="w-full flex items-center gap-3 px-4 py-3 text-left text-[13px] font-medium text-stone-800 active:bg-stone-50">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center"><INote size={16} color="#D97706" /></div>
+            Compte-rendu
+            {(() => { const r = getApptReport(sel.id); if (!r) return null; const s = REPORT_STATUSES.find((s) => s.id === r.text.split("|")[0]); return s ? <span className={`ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded border ${s.color}`}>{s.label}</span> : null; })()}
+            <span className="ml-auto"><IChev /></span>
           </button>
           <button onClick={() => toggleDone(sel.id)} className="w-full flex items-center gap-3 px-4 py-3 text-left text-[13px] font-medium text-stone-800 active:bg-stone-50">
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${sel.done ? "bg-green-50" : "bg-stone-100"}`}><ICheck size={16} color={sel.done ? "#16A34A" : "#9CA3AF"} /></div>
@@ -874,6 +921,22 @@ export default function Home() {
         </div>
         <button onClick={saveReminder} className="w-full py-2.5 bg-stone-900 text-white rounded-lg text-[14px] font-semibold mb-4" style={{ opacity: rTxt && rDel ? 1 : 0.35 }}>Programmer</button>
       </Sheet>
+
+      <Sheet open={showReport} onClose={() => setShowReport(false)}>
+        <h2 className="text-base font-bold mb-3">Compte-rendu</h2>
+        <label className="block text-[11px] font-semibold text-stone-500 mb-1.5">Résultat</label>
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {REPORT_STATUSES.map((s) => (
+            <button key={s.id} onClick={() => setReportStatus(s.id)}
+              className={`px-3 py-1.5 rounded-full text-[12px] font-semibold border-2 transition-all ${reportStatus === s.id ? s.color + " border-current" : "bg-stone-100 text-stone-500 border-transparent"}`}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+        <label className="block text-[11px] font-semibold text-stone-500 mb-1">Commentaire</label>
+        <textarea className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition mb-3 resize-none" rows={3} placeholder="Notes sur le rendez-vous..." value={reportText} onChange={(e) => setReportText(e.target.value)} />
+        <button onClick={saveReport} className="w-full py-2.5 bg-stone-900 text-white rounded-lg text-[14px] font-semibold mb-4" style={{ opacity: reportStatus ? 1 : 0.35 }}>Enregistrer</button>
+      </Sheet>
     </div>
   );
 
@@ -882,8 +945,16 @@ export default function Home() {
 
   // ═══════════════════ HOME VIEW ══════════════════════════════════
   return (
-    <div className="min-h-screen bg-stone-100 animate-view-in">
+    <div className="min-h-screen bg-stone-100 animate-view-in"
+      onTouchStart={(e) => { if (window.scrollY === 0) pullStart.current = e.touches[0].clientY; }}
+      onTouchMove={(e) => { if (pullStart.current !== null) { const diff = Math.min(e.touches[0].clientY - pullStart.current, 80); setPullY(diff > 0 ? diff : 0); } }}
+      onTouchEnd={() => { if (pullY > 60 && !loading) { fetchAll(); toast("Actualisation..."); } setPullY(0); pullStart.current = null; }}>
       <Toasts />
+      {pullY > 0 && (
+        <div className="flex justify-center py-2 transition-all" style={{ height: pullY, opacity: pullY / 60 }}>
+          <IRefresh size={20} color="#9CA3AF" sw={2} />
+        </div>
+      )}
       <div className="px-5 pt-5 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button onClick={() => setView("settings")} className="active:scale-95 transition-transform">
@@ -1008,6 +1079,8 @@ export default function Home() {
           </div>
         ) : dayAppts.map((a, idx) => {
           const aNotes = getApptNotes(a.id);
+          const aReport = getApptReport(a.id);
+          const aReportStatus = aReport ? REPORT_STATUSES.find((s) => s.id === aReport.text.split("|")[0]) : null;
           const isLate = !a.done && a.date === todayKey && a.time < `${pad(today.getHours())}:${pad(today.getMinutes())}`;
           return (
             <div key={a.id} onClick={() => { setSelId(a.id); setView("detail"); }}
@@ -1020,7 +1093,10 @@ export default function Home() {
                     {a.done && <ICheck size={12} color="#fff" sw={2.5} />}
                   </button>
                   <div className="min-w-0 flex-1">
-                    <p className={`text-[14px] font-semibold leading-snug ${a.done ? "line-through text-stone-400" : ""}`}>{a.name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className={`text-[14px] font-semibold leading-snug ${a.done ? "line-through text-stone-400" : ""}`}>{a.name}</p>
+                      {aReportStatus && <span className={`text-[9px] font-bold px-1 py-0.5 rounded border flex-shrink-0 ${aReportStatus.color}`}>{aReportStatus.label}</span>}
+                    </div>
                     <p className={`text-[12px] mt-0.5 truncate ${a.done ? "text-stone-400" : "text-stone-500"}`}>{a.address || "Pas d'adresse"}</p>
                   </div>
                 </div>
