@@ -49,6 +49,7 @@ const IPhone = (p) => <I d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-
 const IMoon = (p) => <I d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" {...p} />;
 const IDownload = (p) => <I d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3" {...p} />;
 const IEdit = (p) => <I d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" {...p} />;
+const IShare = (p) => <I d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8 M16 6l-4-4-4 4 M12 2v13" {...p} />;
 
 // ─── Bottom Navigation Bar ───────────────────────────
 const BottomNav = ({ view, setView, notes }) => (
@@ -893,6 +894,14 @@ export default function Home() {
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${sel.done ? "bg-green-50" : "bg-stone-100"}`}><ICheck size={16} color={sel.done ? "#16A34A" : "#9CA3AF"} /></div>
             {sel.done ? "Terminé ✓" : "Marquer terminé"}<span className="ml-auto"><IChev /></span>
           </button>
+          {typeof navigator !== "undefined" && navigator.share && (
+            <button onClick={() => {
+              const dateStr = new Date(sel.date + "T00:00").toLocaleDateString("fr-BE", { weekday: "long", day: "numeric", month: "long" });
+              navigator.share({ title: `RDV - ${sel.name}`, text: `${sel.name}\n${dateStr} à ${sel.time}\n${sel.address || ""}${sel.phone ? "\nTél: " + sel.phone : ""}`.trim() }).catch(() => {});
+            }} className="w-full flex items-center gap-3 px-4 py-3 text-left text-[13px] font-medium text-stone-800 active:bg-stone-50">
+              <div className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center"><IShare size={16} color="#78716c" /></div>Partager<span className="ml-auto"><IChev /></span>
+            </button>
+          )}
         </div>}
 
         {!editing && sel.source === "manual" && <button onClick={() => { if (window.confirm("Supprimer ce rendez-vous ?")) delAppt(sel.id); }} className="w-full flex items-center justify-center gap-2 py-2.5 text-[13px] font-medium text-red-600 rounded-xl active:bg-red-50"><ITrash size={15} color="#DC2626" /> Supprimer</button>}
@@ -1001,15 +1010,15 @@ export default function Home() {
             <AvatarImg index={avatar} size={36} />
           </button>
           <div>
-            <h1 className="text-[17px] font-bold tracking-tight leading-tight">RoadCRM</h1>
-            <p className="text-[11px] text-stone-400 leading-tight">{session?.user?.name || "Mon compte"}</p>
+            <h1 className="text-[17px] font-bold tracking-tight leading-tight">{today.getHours() < 12 ? "Bonjour" : today.getHours() < 18 ? "Bon après-midi" : "Bonsoir"}{session?.user?.name ? `, ${session.user.name.split(" ")[0]}` : ""}</h1>
+            <p className="text-[11px] text-stone-400 leading-tight">{totalCount === 0 ? "Pas de RDV aujourd'hui" : doneCount === totalCount ? "Tous tes RDV sont terminés !" : `${totalCount - doneCount} RDV restant${totalCount - doneCount > 1 ? "s" : ""} aujourd'hui`}</p>
           </div>
         </div>
         <button onClick={fetchAll} className={`p-2 rounded-lg active:bg-stone-200 ${loading ? "animate-spin" : ""}`}><IRefresh size={16} color="#9CA3AF" /></button>
       </div>
 
       <div className="px-5 mb-3">
-        <p className="text-[12px] text-stone-400">{totalCount} RDV aujourd{"'"}hui · {doneCount} terminé{doneCount !== 1 ? "s" : ""}</p>
+        <p className="text-[12px] text-stone-400">{totalCount} RDV · {doneCount} terminé{doneCount !== 1 ? "s" : ""}</p>
         {totalCount > 0 && (
           <div className="mt-1.5 h-1.5 bg-stone-200 rounded-full overflow-hidden">
             <div className="h-full bg-blue-600 rounded-full animate-progress" style={{ width: `${totalCount > 0 ? (doneCount / totalCount) * 100 : 0}%` }} />
@@ -1045,6 +1054,26 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {!loading && (() => {
+        const tmrw = new Date(today); tmrw.setDate(today.getDate() + 1);
+        const tmrwKey = toKey(tmrw);
+        const tmrwAppts = appts.filter((a) => a.date === tmrwKey).sort((a, b) => a.time.localeCompare(b.time));
+        return tmrwAppts.length > 0 ? (
+          <div className="px-5 mb-3">
+            <p className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-1.5">Demain · {tmrwAppts.length} RDV</p>
+            <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+              {tmrwAppts.map((a) => (
+                <button key={a.id} onClick={() => { setSelId(a.id); setView("detail"); }}
+                  className="flex-shrink-0 bg-white border border-stone-200 rounded-xl px-3 py-2 shadow-sm active:bg-stone-50 text-left" style={{ minWidth: "140px" }}>
+                  <p className="text-[12px] font-semibold truncate">{a.name}</p>
+                  <p className="text-[11px] text-stone-400 mt-0.5">{a.time}{a.address ? ` · ${a.address.split(",")[0]}` : ""}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null;
+      })()}
 
       {loading ? (
         <SkeletonNextAppt />
@@ -1099,9 +1128,10 @@ export default function Home() {
           </div>
         ) : dayAppts.map((a, idx) => {
           const aNotes = getApptNotes(a.id);
+          const isLate = !a.done && a.date === todayKey && a.time < `${pad(today.getHours())}:${pad(today.getMinutes())}`;
           return (
             <div key={a.id} onClick={() => { setSelId(a.id); setView("detail"); }}
-              className={`bg-white border rounded-2xl px-4 py-3 active:bg-stone-50 shadow-sm animate-list-item ${a.done ? "border-green-200 bg-green-50/30" : "border-stone-200"}`}
+              className={`bg-white border rounded-2xl px-4 py-3 active:bg-stone-50 shadow-sm animate-list-item ${a.done ? "border-green-200 bg-green-50/30" : isLate ? "border-orange-300 bg-orange-50/30" : "border-stone-200"}`}
               style={{ animationDelay: `${idx * 60}ms` }}>
               <div className="flex justify-between items-start">
                 <div className="flex items-start gap-2.5 min-w-0 flex-1">
@@ -1115,6 +1145,7 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                  {isLate && <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded uppercase">Retard</span>}
                   <span className="font-mono text-[12px] text-stone-500 font-medium">{a.time}</span>
                   {a.phone && <a href={`tel:${a.phone}`} onClick={(e) => e.stopPropagation()} className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center active:scale-95"><IPhone size={14} color="#fff" /></a>}
                   {a.address && <button onClick={(e) => { e.stopPropagation(); openNav(a.address); }} className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center active:scale-95"><INav size={14} color="#fff" /></button>}

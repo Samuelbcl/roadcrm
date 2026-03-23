@@ -156,6 +156,9 @@ html.dark .bg-orange-50 { background-color: rgba(234,88,12,0.15) !important; }
 html.dark .bg-red-50 { background-color: rgba(220,38,38,0.15) !important; }
 html.dark .bg-amber-50 { background-color: rgba(217,119,6,0.15) !important; }
 html.dark .bg-emerald-50 { background-color: rgba(5,150,105,0.15) !important; }
+html.dark .bg-orange-50 { background-color: rgba(234,88,12,0.15) !important; }
+html.dark .bg-orange-50\/30 { background-color: rgba(234,88,12,0.08) !important; }
+html.dark .border-orange-300 { border-color: rgba(234,88,12,0.4) !important; }
 
 /* Inputs */
 html.dark input, html.dark textarea { color: #e7e5e4; }
