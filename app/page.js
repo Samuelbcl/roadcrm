@@ -1049,13 +1049,17 @@ export default function Home() {
       {loading ? (
         <SkeletonNextAppt />
       ) : nextAppt ? (
-        <div className="mx-5 mb-3 p-3 bg-white border border-stone-200 rounded-2xl flex items-center justify-between gap-3 shadow-sm animate-scale-in">
+        <div onClick={() => { setSelId(nextAppt.id); setView("detail"); }}
+          className="mx-5 mb-3 p-3 bg-white border border-stone-200 rounded-2xl flex items-center justify-between gap-3 shadow-sm animate-scale-in active:bg-stone-50">
           <div className="min-w-0">
             <p className="text-[10px] font-semibold text-blue-600 uppercase tracking-wider">Prochain</p>
             <p className="text-[14px] font-semibold truncate">{nextAppt.name}</p>
             <p className="text-[12px] text-stone-500 truncate mt-0.5">{nextAppt.time}{nextAppt.address ? ` · ${nextAppt.address}` : ""}</p>
           </div>
-          {nextAppt.address && <button onClick={() => openNav(nextAppt.address)} className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 active:scale-95"><INav size={16} color="#fff" /></button>}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {nextAppt.phone && <a href={`tel:${nextAppt.phone}`} onClick={(e) => e.stopPropagation()} className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center active:scale-95"><IPhone size={16} color="#fff" /></a>}
+            {nextAppt.address && <button onClick={(e) => { e.stopPropagation(); openNav(nextAppt.address); }} className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center active:scale-95"><INav size={16} color="#fff" /></button>}
+          </div>
         </div>
       ) : null}
 
