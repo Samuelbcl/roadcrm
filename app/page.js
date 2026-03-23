@@ -432,7 +432,7 @@ export default function Home() {
   const todayKey = toKey(today);
   const selKey = toKey(selDate);
   const calDays = getCalDays(cYear, cMonth);
-  const dayAppts = appts.filter((a) => a.date === selKey).sort((a, b) => a.time.localeCompare(b.time));
+  const dayAppts = appts.filter((a) => a.date === selKey).sort((a, b) => (a.done === b.done ? a.time.localeCompare(b.time) : a.done ? 1 : -1));
   const todayAppts = appts.filter((a) => a.date === todayKey);
   const nextAppt = todayAppts.find((a) => !a.done);
   const apptDates = new Set(appts.map((a) => a.date));
@@ -1112,6 +1112,7 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-2 ml-3 flex-shrink-0">
                   <span className="font-mono text-[12px] text-stone-500 font-medium">{a.time}</span>
+                  {a.phone && <a href={`tel:${a.phone}`} onClick={(e) => e.stopPropagation()} className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center active:scale-95"><IPhone size={14} color="#fff" /></a>}
                   {a.address && <button onClick={(e) => { e.stopPropagation(); openNav(a.address); }} className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center active:scale-95"><INav size={14} color="#fff" /></button>}
                 </div>
               </div>
