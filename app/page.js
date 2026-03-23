@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { supabase } from "@/lib/supabase";
 import { uid, pad, toKey, DAYS, MONTHS, getDateGroup, GROUP_ORDER, getCalDays } from "@/lib/helpers";
-import { INav, IMic, IStop, IPlus, IBell, ICheck, ITrash, IBack, IFwd, IChev, IRefresh, ILogout, ICal, IClose, ISearch, IPhone, IMoon, IDownload, IEdit, IShare } from "@/components/Icons";
+import { INav, IMic, IStop, IPlus, IBell, ICheck, ITrash, IBack, IFwd, IChev, IRefresh, ILogout, ICal, IClose, ISearch, IPhone, IMoon, IDownload, IEdit, IShare, ILink, IGoogle, IMicrosoft, INote } from "@/components/Icons";
 import { BottomNav, SkeletonCard, SkeletonNextAppt, Sheet } from "@/components/UI";
 
 const REPORT_STATUSES = [
@@ -92,22 +92,31 @@ export default function Home() {
     setLoading(true);
     try {
       const manualAppts = await loadManualAppts() || [];
-      let googleAppts = [];
-      if (session.accessToken) {
+      let calendarAppts = [];
+      // Fetch Google Calendar events
+      if (session.googleAccessToken) {
         try {
-          const res = await fetch(`/api/calendar?token=${session.accessToken}`);
+          const res = await fetch(`/api/calendar?token=${session.googleAccessToken}`);
           const data = await res.json();
-          if (data.appointments) googleAppts = data.appointments;
-        } catch (err) { console.error(err); }
+          if (data.appointments) calendarAppts.push(...data.appointments);
+        } catch (err) { console.error("Google Calendar error:", err); }
+      }
+      // Fetch Outlook Calendar events
+      if (session.microsoftAccessToken) {
+        try {
+          const res = await fetch(`/api/calendar/outlook?token=${session.microsoftAccessToken}`);
+          const data = await res.json();
+          if (data.appointments) calendarAppts.push(...data.appointments);
+        } catch (err) { console.error("Outlook Calendar error:", err); }
       }
       await loadNotes();
-      const googleIds = new Set(googleAppts.map((a) => a.id));
-      // Apply saved done statuses from Supabase to Google events
+      const calIds = new Set(calendarAppts.map((a) => a.id));
+      // Apply saved done statuses from Supabase to calendar events
       const savedById = {};
-      manualAppts.forEach((a) => { if (googleIds.has(a.id)) savedById[a.id] = a; });
-      googleAppts = googleAppts.map((a) => savedById[a.id] ? { ...a, done: savedById[a.id].done } : a);
-      const uniqueManual = manualAppts.filter((a) => !googleIds.has(a.id));
-      setAppts([...googleAppts, ...uniqueManual].sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`)));
+      manualAppts.forEach((a) => { if (calIds.has(a.id)) savedById[a.id] = a; });
+      calendarAppts = calendarAppts.map((a) => savedById[a.id] ? { ...a, done: savedById[a.id].done } : a);
+      const uniqueManual = manualAppts.filter((a) => !calIds.has(a.id));
+      setAppts([...calendarAppts, ...uniqueManual].sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`)));
     } catch (err) { toast("Erreur de chargement", "error"); }
     finally { setLoading(false); }
   }, [session, toast, loadManualAppts, loadNotes]);
@@ -194,15 +203,13 @@ export default function Home() {
     setSelDate(new Date(y, m - 1, d)); setCMonth(m - 1); setCYear(y);
     setFN(""); setFA(""); setFP(""); setFT("09:00"); setFD(toKey(new Date())); setShowForm(false);
     toast("Rendez-vous ajouté");
-    // Sync to Google Calendar in background
-    if (session?.accessToken) {
-      try {
-        await fetch("/api/calendar/create", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token: session.accessToken, summary: newAppt.name, location: newAppt.address, date: newAppt.date, time: newAppt.time }),
-        });
-      } catch {}
+    // Sync to calendars in background
+    const syncBody = { summary: newAppt.name, location: newAppt.address, date: newAppt.date, time: newAppt.time };
+    if (session?.googleAccessToken) {
+      try { await fetch("/api/calendar/create", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: session.googleAccessToken, ...syncBody }) }); } catch {}
+    }
+    if (session?.microsoftAccessToken) {
+      try { await fetch("/api/calendar/outlook/create", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: session.microsoftAccessToken, ...syncBody }) }); } catch {}
     }
   };
 
@@ -329,12 +336,16 @@ export default function Home() {
           <p className="text-stone-500 text-[14px] leading-relaxed">Le CRM de terrain pour les commerciaux.<br/>Tes rendez-vous, ta route, tes notes.</p>
         </div>
         <button onClick={() => signIn("google")} className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white border border-stone-200 rounded-2xl text-[14px] font-semibold text-stone-800 shadow-sm active:bg-stone-50 mb-3">
-          <svg width="20" height="20" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+          <IGoogle size={20} />
           Continuer avec Google
+        </button>
+        <button onClick={() => signIn("azure-ad")} className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white border border-stone-200 rounded-2xl text-[14px] font-semibold text-stone-800 shadow-sm active:bg-stone-50 mb-3">
+          <IMicrosoft size={20} />
+          Continuer avec Microsoft
         </button>
         <div className="flex items-center gap-2 justify-center mt-6">
           <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-          <p className="text-[11px] text-stone-400">Synchronisation Google Calendar</p>
+          <p className="text-[11px] text-stone-400">Synchronisation Google & Outlook Calendar</p>
         </div>
         <div className="flex items-center gap-2 justify-center mt-1.5">
           <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
@@ -562,6 +573,28 @@ export default function Home() {
           </button>
         </div>
 
+        {/* Calendriers connectés */}
+        <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden mb-4 shadow-sm">
+          <div className="px-4 py-3 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center"><ILink size={16} color="#3B82F6" /></div>
+            <p className="text-[13px] font-semibold text-stone-800">Calendriers connectés</p>
+          </div>
+          <div className="border-t border-stone-100 px-4 py-2.5 flex items-center gap-3">
+            <IGoogle size={18} />
+            <p className="text-[13px] text-stone-700 flex-1">Google Calendar</p>
+            {session?.googleAccessToken
+              ? <span className="text-[11px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Connecté</span>
+              : <button onClick={() => signIn("google")} className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full active:scale-95">Connecter</button>}
+          </div>
+          <div className="border-t border-stone-100 px-4 py-2.5 flex items-center gap-3">
+            <IMicrosoft size={18} />
+            <p className="text-[13px] text-stone-700 flex-1">Outlook Calendar</p>
+            {session?.microsoftAccessToken
+              ? <span className="text-[11px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Connecté</span>
+              : <button onClick={() => signIn("azure-ad")} className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full active:scale-95">Connecter</button>}
+          </div>
+        </div>
+
         {/* Logout */}
         <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden mb-4 shadow-sm">
           <button onClick={() => { if (window.confirm("Se deconnecter ?")) signOut(); }}
@@ -782,6 +815,8 @@ export default function Home() {
           <>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-[12px] text-stone-400">{new Date(sel.date + "T00:00").toLocaleDateString("fr-BE", { weekday: "long", day: "numeric", month: "long" })}</span>
+              {sel.source === "google" && <span className="flex items-center gap-1 text-[10px] font-bold text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded"><IGoogle size={11} /> Google</span>}
+              {sel.source === "outlook" && <span className="flex items-center gap-1 text-[10px] font-bold text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded"><IMicrosoft size={11} /> Outlook</span>}
               {sel.done && <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded uppercase">Terminé</span>}
               {(() => { const r = getApptReport(sel.id); if (!r) return null; const s = REPORT_STATUSES.find((s) => s.id === r.text.split("|")[0]); return s ? <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${s.color}`}>{s.label}</span> : null; })()}
             </div>
@@ -1102,6 +1137,8 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-2 ml-3 flex-shrink-0">
                   {isLate && <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded uppercase">Retard</span>}
+                  {a.source === "google" && <IGoogle size={14} />}
+                  {a.source === "outlook" && <IMicrosoft size={14} />}
                   <span className="font-mono text-[12px] text-stone-500 font-medium">{a.time}</span>
                   {a.phone && <a href={`tel:${a.phone}`} onClick={(e) => e.stopPropagation()} className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center active:scale-95"><IPhone size={14} color="#fff" /></a>}
                   {a.address && <button onClick={(e) => { e.stopPropagation(); openNav(a.address); }} className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center active:scale-95"><INav size={14} color="#fff" /></button>}
