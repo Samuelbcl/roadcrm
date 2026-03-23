@@ -48,6 +48,7 @@ const IHome = (p) => <I d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V
 const IPhone = (p) => <I d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" {...p} />;
 const IMoon = (p) => <I d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" {...p} />;
 const IDownload = (p) => <I d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3" {...p} />;
+const IEdit = (p) => <I d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" {...p} />;
 
 // ─── Bottom Navigation Bar ───────────────────────────
 const BottomNav = ({ view, setView, notes }) => (
@@ -151,6 +152,12 @@ export default function Home() {
   const [rDel, setRDel] = useState(null);
   const [notesTab, setNotesTab] = useState("voice");
   const [searchQuery, setSearchQuery] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [eN, setEN] = useState("");
+  const [eA, setEA] = useState("");
+  const [eP, setEP] = useState("");
+  const [eD, setED] = useState("");
+  const [eT, setET] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [avatar, setAvatar] = useState(() => { if (typeof window === "undefined") return 0; return parseInt(localStorage.getItem("roadcrm-avatar") || "0"); });
@@ -295,6 +302,15 @@ export default function Home() {
     }
     setAppts((prev) => prev.map((a) => a.id === id ? { ...a, done: newDone } : a));
     toast(newDone ? "Marqué terminé" : "Marqué non terminé");
+  };
+
+  const saveEdit = async () => {
+    if (!sel || !supabase || !eN.trim()) return;
+    const updates = { name: eN.trim(), address: eA.trim(), phone: eP.trim(), date: eD, time: eT };
+    await supabase.from("appointments").update(updates).eq("id", sel.id);
+    setAppts((prev) => prev.map((a) => a.id === sel.id ? { ...a, ...updates } : a));
+    setEditing(false);
+    toast("Rendez-vous modifié");
   };
 
   const delAppt = async (id) => {
@@ -814,22 +830,51 @@ export default function Home() {
   if (view === "detail" && sel) return (
     <div className="min-h-screen bg-stone-100">
       <Toasts />
-      <div className="px-5 pt-4 pb-2"><button onClick={() => setView("home")} className="flex items-center gap-1.5 text-[13px] text-stone-500 font-medium"><IBack size={18} color="#6B6B6B" /> Retour</button></div>
+      <div className="px-5 pt-4 pb-2">
+        <div className="flex items-center justify-between">
+          <button onClick={() => { setView("home"); setEditing(false); }} className="flex items-center gap-1.5 text-[13px] text-stone-500 font-medium"><IBack size={18} color="#6B6B6B" /> Retour</button>
+          {sel.source === "manual" && !editing && (
+            <button onClick={() => { setEN(sel.name); setEA(sel.address || ""); setEP(sel.phone || ""); setED(sel.date); setET(sel.time); setEditing(true); }}
+              className="flex items-center gap-1.5 text-[13px] text-blue-600 font-medium"><IEdit size={15} color="#2563EB" /> Modifier</button>
+          )}
+        </div>
+      </div>
       <div className="px-5 pb-32">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-[12px] text-stone-400">{new Date(sel.date + "T00:00").toLocaleDateString("fr-BE", { weekday: "long", day: "numeric", month: "long" })}</span>
-          {sel.done && <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded uppercase">Terminé</span>}
-        </div>
-        <div className="flex items-baseline gap-2 mb-1">
-          <h1 className="text-xl font-bold tracking-tight">{sel.name}</h1>
-          <span className="font-mono text-[13px] text-stone-500 font-medium">{sel.time}{sel.timeEnd ? ` – ${sel.timeEnd}` : ""}</span>
-        </div>
-        <p className="text-[13px] text-stone-500 leading-relaxed">{sel.address || "Aucune adresse"}</p>
-        {sel.phone && <p className="text-[13px] text-blue-600 font-medium mt-0.5">{sel.phone}</p>}
-        {sel.description && <p className="text-[12px] text-stone-500 mt-1.5 bg-stone-50 rounded-lg px-3 py-2 leading-relaxed">{sel.description}</p>}
-        <div className="mb-5" />
+        {editing ? (
+          <div className="mb-5">
+            <label className="block text-[11px] font-semibold text-stone-500 mb-1">Client</label>
+            <input className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition mb-2.5" value={eN} onChange={(e) => setEN(e.target.value)} />
+            <label className="block text-[11px] font-semibold text-stone-500 mb-1">Adresse</label>
+            <input className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition mb-2.5" value={eA} onChange={(e) => setEA(e.target.value)} />
+            <label className="block text-[11px] font-semibold text-stone-500 mb-1">Téléphone</label>
+            <input type="tel" className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition mb-2.5" value={eP} onChange={(e) => setEP(e.target.value)} />
+            <div className="flex gap-2 mb-3">
+              <div className="flex-1"><label className="block text-[11px] font-semibold text-stone-500 mb-1">Date</label><input type="date" className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition" value={eD} onChange={(e) => setED(e.target.value)} /></div>
+              <div className="flex-1"><label className="block text-[11px] font-semibold text-stone-500 mb-1">Heure</label><input type="time" className="w-full px-3 py-2 bg-stone-100 rounded-lg text-[14px] outline-none border-2 border-transparent focus:border-blue-500 focus:bg-white transition" value={eT} onChange={(e) => setET(e.target.value)} /></div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setEditing(false)} className="flex-1 py-2.5 bg-stone-100 text-[13px] font-semibold text-stone-600 rounded-lg">Annuler</button>
+              <button onClick={saveEdit} className="flex-1 py-2.5 bg-stone-900 text-white text-[13px] font-semibold rounded-lg" style={{ opacity: eN.trim() ? 1 : 0.35 }}>Enregistrer</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[12px] text-stone-400">{new Date(sel.date + "T00:00").toLocaleDateString("fr-BE", { weekday: "long", day: "numeric", month: "long" })}</span>
+              {sel.done && <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded uppercase">Terminé</span>}
+            </div>
+            <div className="flex items-baseline gap-2 mb-1">
+              <h1 className="text-xl font-bold tracking-tight">{sel.name}</h1>
+              <span className="font-mono text-[13px] text-stone-500 font-medium">{sel.time}{sel.timeEnd ? ` – ${sel.timeEnd}` : ""}</span>
+            </div>
+            <p className="text-[13px] text-stone-500 leading-relaxed">{sel.address || "Aucune adresse"}</p>
+            {sel.phone && <p className="text-[13px] text-blue-600 font-medium mt-0.5">{sel.phone}</p>}
+            {sel.description && <p className="text-[12px] text-stone-500 mt-1.5 bg-stone-50 rounded-lg px-3 py-2 leading-relaxed">{sel.description}</p>}
+            <div className="mb-5" />
+          </>
+        )}
 
-        <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden divide-y divide-stone-100 mb-5 shadow-sm">
+        {!editing && <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden divide-y divide-stone-100 mb-5 shadow-sm">
           <button onClick={() => openNav(sel.address)} className="w-full flex items-center gap-3 px-4 py-3 text-left text-[13px] font-medium text-stone-800 active:bg-stone-50" style={{ opacity: sel.address ? 1 : 0.4 }}>
             <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center"><INav size={16} color="#2563EB" /></div>Lancer {navNames[navApp]}<span className="ml-auto"><IChev /></span>
           </button>
@@ -848,11 +893,11 @@ export default function Home() {
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${sel.done ? "bg-green-50" : "bg-stone-100"}`}><ICheck size={16} color={sel.done ? "#16A34A" : "#9CA3AF"} /></div>
             {sel.done ? "Terminé ✓" : "Marquer terminé"}<span className="ml-auto"><IChev /></span>
           </button>
-        </div>
+        </div>}
 
-        {sel.source === "manual" && <button onClick={() => { if (window.confirm("Supprimer ce rendez-vous ?")) delAppt(sel.id); }} className="w-full flex items-center justify-center gap-2 py-2.5 text-[13px] font-medium text-red-600 rounded-xl active:bg-red-50"><ITrash size={15} color="#DC2626" /> Supprimer</button>}
+        {!editing && sel.source === "manual" && <button onClick={() => { if (window.confirm("Supprimer ce rendez-vous ?")) delAppt(sel.id); }} className="w-full flex items-center justify-center gap-2 py-2.5 text-[13px] font-medium text-red-600 rounded-xl active:bg-red-50"><ITrash size={15} color="#DC2626" /> Supprimer</button>}
 
-        {(() => {
+        {!editing && (() => {
           const clientHistory = appts.filter((a) => a.id !== sel.id && a.name.toLowerCase() === sel.name.toLowerCase()).sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`));
           return clientHistory.length > 0 ? (
             <div className="mt-5">
@@ -873,7 +918,7 @@ export default function Home() {
           ) : null;
         })()}
 
-        {selNotes.length > 0 && (
+        {!editing && selNotes.length > 0 && (
           <div className="mt-5">
             <h3 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-2">Notes sur ce RDV</h3>
             {selNotes.map((n) => (
