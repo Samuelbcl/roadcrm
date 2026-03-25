@@ -1153,7 +1153,7 @@ export default function Home() {
         })}
       </div>
 
-      <button onClick={() => { setFD(selKey); setShowForm(true); }} className="fixed bottom-20 right-5 w-12 h-12 rounded-full bg-stone-900 flex items-center justify-center shadow-lg active:scale-95 z-40"><IPlus size={22} color="#fff" /></button>
+      <button onClick={() => { setFD(selKey); setShowForm(true); }} className="fixed right-5 w-12 h-12 rounded-full bg-stone-900 flex items-center justify-center shadow-lg active:scale-95 z-40" style={{ bottom: "calc(5rem + env(safe-area-inset-bottom))" }}><IPlus size={22} color="#fff" /></button>
 
       <Sheet open={showForm} onClose={() => setShowForm(false)}>
         <h2 className="text-base font-bold mb-3">Nouveau rendez-vous</h2>
