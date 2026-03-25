@@ -434,7 +434,7 @@ export default function Home() {
 
   // ═══════════════════ SETTINGS VIEW ════════════════════════════════
   if (view === "settings") return (
-    <div className="min-h-screen bg-stone-100">
+    <div className="min-h-screen bg-stone-100 safe-top">
       <Toasts />
       {/* Nav picker sheet */}
       {openSection === "nav" && (
@@ -637,7 +637,7 @@ export default function Home() {
   }) : [];
 
   if (view === "search") return (
-    <div className="min-h-screen bg-stone-100">
+    <div className="min-h-screen bg-stone-100 safe-top">
       <Toasts />
       <div className="px-5 pt-4 pb-2">
         <div className="flex items-center gap-3">
@@ -727,7 +727,7 @@ export default function Home() {
     const activeNotes = notesTab === "voice" ? voiceNotes : reminderNotes;
     const grouped = groupByDate(activeNotes);
     return (
-      <div className="min-h-screen bg-stone-100">
+      <div className="min-h-screen bg-stone-100 safe-top">
         <Toasts />
         <div className="px-5 pt-4 pb-2"><button onClick={() => setView("home")} className="flex items-center gap-1.5 text-[13px] text-stone-500 font-medium"><IBack size={18} color="#6B6B6B" /> Retour</button></div>
         <div className="px-5 mb-3">
@@ -782,7 +782,7 @@ export default function Home() {
 
   // ═══════════════════ DETAIL VIEW ════════════════════════════════
   if (view === "detail" && sel) return (
-    <div className="min-h-screen bg-stone-100">
+    <div className="min-h-screen bg-stone-100 safe-top">
       <Toasts />
       <div className="px-5 pt-4 pb-2">
         <div className="flex items-center justify-between">
@@ -990,24 +990,23 @@ export default function Home() {
           <IRefresh size={20} color="#9CA3AF" sw={2} />
         </div>
       )}
-      <div className="px-5 pt-5 pb-2 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="safe-top">
+        <div className="px-5 pt-3 pb-2 flex items-center justify-between">
           <button onClick={() => setView("settings")} className="active:scale-95 transition-transform">
-            <AvatarImg index={avatar} size={36} />
+            <AvatarImg index={avatar} size={32} />
           </button>
-          <div>
-            <h1 className="text-[17px] font-bold tracking-tight leading-tight">{today.getHours() < 12 ? "Bonjour" : today.getHours() < 18 ? "Bon après-midi" : "Bonsoir"}{session?.user?.name ? `, ${session.user.name.split(" ")[0]}` : ""}</h1>
-            <p className="text-[11px] text-stone-400 leading-tight">{totalCount === 0 ? "Pas de RDV aujourd'hui" : doneCount === totalCount ? "Tous tes RDV sont terminés !" : `${totalCount - doneCount} RDV restant${totalCount - doneCount > 1 ? "s" : ""} aujourd'hui`}</p>
+          <div className="flex-1 text-center">
+            <h1 className="text-[15px] font-bold tracking-tight leading-tight">{today.getHours() < 12 ? "Bonjour" : today.getHours() < 18 ? "Bon après-midi" : "Bonsoir"}{session?.user?.name ? `, ${session.user.name.split(" ")[0]}` : ""}</h1>
           </div>
+          <button onClick={fetchAll} className={`p-2 rounded-lg active:bg-stone-200 ${loading ? "animate-spin" : ""}`}><IRefresh size={16} color="#9CA3AF" /></button>
         </div>
-        <button onClick={fetchAll} className={`p-2 rounded-lg active:bg-stone-200 ${loading ? "animate-spin" : ""}`}><IRefresh size={16} color="#9CA3AF" /></button>
       </div>
 
       <div className="px-5 mb-3">
-        <p className="text-[12px] text-stone-400">{totalCount} RDV · {doneCount} terminé{doneCount !== 1 ? "s" : ""}</p>
+        <p className="text-[11px] text-stone-400">{totalCount === 0 ? "Pas de RDV aujourd'hui" : doneCount === totalCount ? "Tous tes RDV sont terminés !" : `${totalCount - doneCount} RDV restant${totalCount - doneCount > 1 ? "s" : ""} · ${doneCount}/${totalCount} terminés`}</p>
         {totalCount > 0 && (
-          <div className="mt-1.5 h-1.5 bg-stone-200 rounded-full overflow-hidden">
-            <div className="h-full bg-blue-600 rounded-full animate-progress" style={{ width: `${totalCount > 0 ? (doneCount / totalCount) * 100 : 0}%` }} />
+          <div className="mt-1 h-1 bg-stone-200 rounded-full overflow-hidden">
+            <div className="h-full bg-blue-600 rounded-full animate-progress" style={{ width: `${(doneCount / totalCount) * 100}%` }} />
           </div>
         )}
       </div>
