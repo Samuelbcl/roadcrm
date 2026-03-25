@@ -991,7 +991,7 @@ export default function Home() {
         </div>
       )}
       <div className="safe-top">
-        <div className="px-5 pt-3 pb-2 flex items-center justify-between">
+        <div className="px-5 pt-8 pb-2 flex items-center justify-between">
           <button onClick={() => setView("settings")} className="active:scale-95 transition-transform">
             <AvatarImg index={avatar} size={32} />
           </button>

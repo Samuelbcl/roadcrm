@@ -2,7 +2,7 @@ import { IHome, ISearch, INote, ISettings } from "./Icons";
 
 export const BottomNav = ({ view, setView, notes }) => (
   <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-stone-200 safe-nav-bottom">
-    <div className="flex items-center justify-around px-2 py-1.5">
+    <div className="flex items-center justify-around px-2 py-2.5">
       {[
         { id: "home", icon: IHome, label: "Accueil" },
         { id: "search", icon: ISearch, label: "Clients" },
